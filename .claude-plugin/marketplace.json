@@ -6,7 +6,8 @@
   },
   "owner": {
     "name": "kgai maintainers",
-    "email": "team@kgai.dev"
+    "email": "team@kgai.dev",
+    "url": "https://github.com/kgaidev"
   },
   "plugins": [
     {

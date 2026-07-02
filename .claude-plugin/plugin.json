@@ -8,6 +8,8 @@
     "name": "kgai maintainers",
     "email": "team@kgai.dev"
   },
+  "repository": "https://github.com/kgaidev/kgai",
+  "homepage": "https://github.com/kgaidev/kgai",
   "license": "MIT",
   "keywords": [
     "knowledge-graph",
