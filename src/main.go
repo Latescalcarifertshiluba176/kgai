@@ -18,6 +18,11 @@ import (
 	"kgai/internal/store"
 )
 
+// version is the plugin release version, injected at build time via
+// -ldflags "-X main.version=<v>" (from .claude-plugin/plugin.json). Defaults to
+// "dev" for local/unstamped builds.
+var version = "dev"
+
 func main() {
 	if len(os.Args) < 2 {
 		usage()
@@ -68,7 +73,7 @@ func dispatch(cmd string, args []string) error {
 	case "doctor":
 		return cmdDoctor(args)
 	case "version", "-v", "--version":
-		emit(map[string]any{"ok": true, "name": "kg", "schema_version": store.SchemaVersion})
+		emit(map[string]any{"ok": true, "name": "kg", "version": version, "schema_version": store.SchemaVersion})
 		return nil
 	case "help", "-h", "--help":
 		usage()

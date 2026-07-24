@@ -105,8 +105,10 @@ case "$(uname -s)/$(uname -m)" in
   *) status "⚠️ ENGINE NOT INSTALLED — unsupported platform $(uname -s)/$(uname -m). Linux (x86_64/aarch64) and macOS are supported."; exit 0 ;;
 esac
 
+VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/.claude-plugin/plugin.json" 2>/dev/null | head -n1)"
+VERSION="${VERSION:-dev}"
 if ( cd "$ROOT/src" && CGO_ENABLED=1 go build \
-        -ldflags="-extldflags '-Wl,-rpath,\$ORIGIN/../lib'" \
+        -ldflags="-X main.version=$VERSION -extldflags '-Wl,-rpath,\$ORIGIN/../lib'" \
         -o "$BIN" . ) >&2; then
   cp "$ROOT/third_party/go-kuzu/lib/dynamic/$libsub"/libkuzu.* "$LIBDIR/" 2>/dev/null || true
   report_ready "built from source"

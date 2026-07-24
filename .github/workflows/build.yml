@@ -25,6 +25,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Verify plugin.json version matches the tag
+        run: |
+          VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json | head -n1)"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "dev" ]; then
+            echo "::error::plugin.json has no release version set (got '${VERSION:-<empty>}'). Bump it before tagging."
+            exit 1
+          fi
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match plugin.json version v$VERSION. Bump plugin.json to match the tag before releasing."
+            exit 1
+          fi
+          echo "Version OK: $GITHUB_REF_NAME matches plugin.json ($VERSION)"
       - name: Create release (idempotent)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -63,15 +75,22 @@ jobs:
       - name: Fetch native lib + binding
         run: bash scripts/fetch-libs.sh
 
+      - name: Read plugin version
+        id: ver
+        run: |
+          VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json | head -n1)"
+          echo "version=${VERSION:-dev}" >> "$GITHUB_OUTPUT"
+
       - name: Build kg
         working-directory: src
         env:
           CGO_ENABLED: '1'
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           if [ "${{ matrix.os }}" = "darwin" ]; then
-            go build -ldflags="-extldflags '-Wl,-rpath,@loader_path/../lib'" -o kg .
+            go build -ldflags="-X main.version=$VERSION -extldflags '-Wl,-rpath,@loader_path/../lib'" -o kg .
           else
-            go build -ldflags="-extldflags '-Wl,-rpath,\$ORIGIN/../lib'" -o kg .
+            go build -ldflags="-X main.version=$VERSION -extldflags '-Wl,-rpath,\$ORIGIN/../lib'" -o kg .
           fi
 
       # Intel Macs get a cross-built binary from the same runner: Apple clang compiles
@@ -83,8 +102,9 @@ jobs:
           CGO_ENABLED: '1'
           GOARCH: amd64
           CC: cc -arch x86_64
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          go build -ldflags="-extldflags '-Wl,-rpath,@loader_path/../lib'" -o kg-x86_64 .
+          go build -ldflags="-X main.version=$VERSION -extldflags '-Wl,-rpath,@loader_path/../lib'" -o kg-x86_64 .
 
       - name: Smoke test
         run: |
