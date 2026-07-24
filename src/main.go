@@ -72,6 +72,8 @@ func dispatch(cmd string, args []string) error {
 		return cmdExport(args)
 	case "doctor":
 		return cmdDoctor(args)
+	case "status", "info":
+		return cmdStatus(args)
 	case "version", "-v", "--version":
 		emit(map[string]any{"ok": true, "name": "kg", "version": version, "schema_version": store.SchemaVersion})
 		return nil
@@ -398,6 +400,24 @@ func cmdDoctor(args []string) error {
 	return nil
 }
 
+func cmdStatus(args []string) error {
+	fs := flag.NewFlagSet("status", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	e, err := open()
+	if err != nil {
+		return err
+	}
+	rep, err := e.Status()
+	if err != nil {
+		return err
+	}
+	rep.Version = version
+	emitVal(rep)
+	return nil
+}
+
 // ---- output ----------------------------------------------------------------
 
 func emit(v map[string]any) {
@@ -457,6 +477,7 @@ ADMIN
                after sync reports a shard fork)
   rebuild      discard graph cache and replay the whole log
   export --canonical   deterministic dump for replay verification
+  status       config + graph summary at a glance (remote/cloud, counts)
   doctor       verify hash chains and report store health
 
 OUTPUT

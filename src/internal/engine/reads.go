@@ -516,6 +516,79 @@ type DoctorReport struct {
 	OK            bool     `json:"ok"`
 }
 
+// StatusReport is a fast, at-a-glance summary of the store: its configuration
+// (identity, whether a sync remote / cloud token are set) and the live graph size.
+// Unlike Doctor it does NOT verify hash chains, so it stays cheap on large stores.
+type StatusReport struct {
+	Version       string `json:"version,omitempty"`
+	Root          string `json:"root"`
+	Project       string `json:"project,omitempty"`
+	InstallID     string `json:"install_id"`
+	Actor         string `json:"actor"`
+	Machine       string `json:"machine,omitempty"`
+	SchemaVersion int    `json:"schema_version"`
+
+	// Sync / remote configuration.
+	Remote           string `json:"remote,omitempty"` // redacted (credentials stripped)
+	RemoteConfigured bool   `json:"remote_configured"`
+	SyncTransport    string `json:"sync_transport"` // none | s3 | kgai-cloud | git
+	CloudConfigured  bool   `json:"cloud_configured"`
+
+	// Live graph summary.
+	Events    int `json:"events"`
+	Elements  int `json:"elements"`
+	Decisions int `json:"decisions"`
+	Conflicts int `json:"conflicts"`
+
+	RetiredInstalls int  `json:"retired_installs,omitempty"`
+	OK              bool `json:"ok"`
+}
+
+func (e *Engine) Status() (StatusReport, error) {
+	c := e.S.Config
+	rep := StatusReport{
+		Root: e.S.Root, Project: store.ProjectRoot(),
+		InstallID: c.InstallID, Actor: c.Actor, Machine: c.Machine,
+		SchemaVersion:    c.SchemaVer,
+		Remote:           redactURL(c.Remote),
+		RemoteConfigured: c.Remote != "",
+		SyncTransport:    syncTransport(c.Remote),
+		CloudConfigured:  c.CloudToken != "",
+		RetiredInstalls:  len(c.RetiredInstalls),
+		OK:               true,
+	}
+	if all, err := e.S.ReadAll(); err == nil {
+		rep.Events = len(all)
+	}
+	if g, err := e.openRead(); err == nil {
+		if r, _ := g.Raw(`MATCH (e:Element) RETURN count(e) AS c`); len(r) > 0 {
+			rep.Elements = int(asInt(r[0]["c"]))
+		}
+		if r, _ := g.Raw(`MATCH (d:Decision) RETURN count(d) AS c`); len(r) > 0 {
+			rep.Decisions = int(asInt(r[0]["c"]))
+		}
+		g.Close()
+	}
+	if conf, err := e.Conflicts(""); err == nil {
+		rep.Conflicts = len(conf)
+	}
+	return rep, nil
+}
+
+// syncTransport classifies the configured remote the same way remote.For dispatches it.
+func syncTransport(remote string) string {
+	switch {
+	case remote == "":
+		return "none"
+	case strings.HasPrefix(remote, "s3://"):
+		return "s3"
+	case strings.HasPrefix(remote, "kgai://"):
+		return "kgai-cloud"
+	default:
+		return "git"
+	}
+}
+
 func (e *Engine) Doctor() (DoctorReport, error) {
 	rep := DoctorReport{
 		Root: e.S.Root, InstallID: e.S.Config.InstallID, Actor: e.S.Config.Actor,
