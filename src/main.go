@@ -104,7 +104,7 @@ func cmdInit(args []string) error {
 	fs := flag.NewFlagSet("init", flag.ContinueOnError)
 	root := fs.String("root", "", "store root (default: $KGAI_STORE or <project>/.kgai/store)")
 	actor := fs.String("actor", "", "actor/author name for this install")
-	remote := fs.String("remote", "", "sync remote: s3://bucket/prefix (supported), git URL (experimental), kgai://org/project (beta)")
+	remote := fs.String("remote", "", "sync remote: s3://bucket/prefix[?profile=NAME&region=REGION] (supported; profile pins an AWS/SSO profile), git URL (experimental), kgai://org/project (beta)")
 	token := fs.String("token", "", "kgai cloud token (stored install-locally, 0600)")
 	cloudURL := fs.String("cloud-url", "", "kgai cloud broker base URL (overridable by KGAI_CLOUD_URL)")
 	if err := fs.Parse(args); err != nil {

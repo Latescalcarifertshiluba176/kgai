@@ -13,4 +13,6 @@ Run `kg sync` for the current project and report the result to the user.
 
 Notes: S3 remotes are the supported path. Git remotes are experimental and untested —
 warn the user if the remote is a git URL. Never run `kg rotate` without the user's
-explicit confirmation.
+explicit confirmation. If S3 sync fails with an AWS credential/SSO error, the remote can
+pin a profile — `kg init --remote "s3://bucket/prefix?profile=NAME"` — and the user may
+need `aws sso login --profile NAME` first.

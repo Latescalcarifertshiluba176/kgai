@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	neturl "net/url"
 	"os"
 	"strings"
 	"time"
@@ -14,16 +15,27 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// newS3Remote parses s3://bucket[/prefix] and returns a segment-protocol remote over
-// that bucket. Credentials/region resolve the standard AWS way (env vars, shared
-// config/profile, IMDS); any S3-compatible service works via AWS_ENDPOINT_URL.
+// newS3Remote parses s3://bucket[/prefix][?profile=NAME&region=REGION] and returns a
+// segment-protocol remote over that bucket. Credentials/region resolve the standard AWS
+// way (env vars, shared config/profile, IMDS); any S3-compatible service works via
+// AWS_ENDPOINT_URL. The optional ?profile= selects a named shared-config profile for THIS
+// remote — including an SSO profile (run `aws sso login --profile NAME` first) — so the
+// choice is pinned in the store instead of relying on a global AWS_PROFILE.
 func newS3Remote(url string) (Remote, error) {
 	rest := strings.TrimPrefix(url, "s3://")
+	var profile, region string
+	if base, query, ok := strings.Cut(rest, "?"); ok {
+		rest = base
+		if vals, err := neturl.ParseQuery(query); err == nil {
+			profile = vals.Get("profile")
+			region = vals.Get("region")
+		}
+	}
 	bucket, prefix, _ := strings.Cut(rest, "/")
 	if bucket == "" {
-		return nil, fmt.Errorf("invalid S3 remote %q (want s3://bucket[/prefix])", url)
+		return nil, fmt.Errorf("invalid S3 remote %q (want s3://bucket[/prefix][?profile=NAME&region=REGION])", url)
 	}
-	client, err := newS3Client()
+	client, err := newS3Client(profile, region)
 	if err != nil {
 		return nil, err
 	}
@@ -34,10 +46,20 @@ func newS3Remote(url string) (Remote, error) {
 	}, nil
 }
 
-func newS3Client() (*s3.Client, error) {
+// newS3Client builds an S3 client. A non-empty profile selects a named shared-config
+// profile (env AWS_PROFILE still applies when profile is empty); a non-empty region
+// overrides the profile/env region.
+func newS3Client(profile, region string) (*s3.Client, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	cfg, err := awsconfig.LoadDefaultConfig(ctx)
+	opts := []func(*awsconfig.LoadOptions) error{}
+	if profile != "" {
+		opts = append(opts, awsconfig.WithSharedConfigProfile(profile))
+	}
+	if region != "" {
+		opts = append(opts, awsconfig.WithRegion(region))
+	}
+	cfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("loading AWS config: %w", err)
 	}

@@ -185,6 +185,17 @@ kg sync                                      # or /kgai:kg-sync from Claude Code
 - The **S3 transport is the supported path** — any S3-compatible bucket you own. No
   server, no lock-in. It is exercised by the test suite (write-once races, copied-store
   fork detection) and by archived benchmark runs up to 1,000,000-decision stores.
+- **Credentials** resolve the standard AWS way (env vars, shared config, IMDS). To pin a
+  named profile — including an **SSO** profile — to *this* store instead of exporting a
+  global `AWS_PROFILE`, add it to the remote URL:
+
+  ```bash
+  aws sso login --profile my-sso                                  # once, to refresh the SSO token
+  kg init --remote "s3://your-bucket/team-kg?profile=my-sso&region=eu-west-1"
+  ```
+
+  `region` is optional (overrides the profile/env region). S3-compatible services
+  (MinIO, R2, LocalStack) work via `AWS_ENDPOINT_URL`.
 - **Git remotes are implemented but experimental** — not yet systematically tested.
 - A hosted sync plane (**kgai cloud**) is in closed beta — [kgai.dev](https://kgai.dev/#cloud).
 - Decisions are immutable, content-addressed events in per-writer append-only shards —

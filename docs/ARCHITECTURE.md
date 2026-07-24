@@ -83,7 +83,10 @@ Transports are pluggable (`internal/remote`, chosen by the remote URL scheme):
 
 - **git** (any git URL): the store dir is a git repo; sync = commit → fetch → union
   merge → push.
-- **s3** (`s3://bucket/prefix`): a **stateless segment protocol** for object stores.
+- **s3** (`s3://bucket/prefix[?profile=NAME&region=REGION]`): a **stateless segment
+  protocol** for object stores. Credentials resolve the standard AWS chain; the optional
+  `?profile=` pins a named shared-config profile (incl. SSO) to this store, `?region=`
+  overrides the region — both parsed off the URL before bucket/prefix.
   Each push uploads a write-once object `segments/<install>/<seq>-<count>.ndjson`
   holding that install's next batch of events. What to push/pull is derived by
   comparing local shard lengths with the cumulative counts encoded in the keys — no
