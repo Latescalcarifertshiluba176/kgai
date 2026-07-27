@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "kgai-marketplace",
   "metadata": {
-    "description": "Shared memory for software teams building with AI — decisions, the why, and the dead ends, captured automatically."
+    "description": "Shared decision memory for AI dev teams — decisions, the why, and the dead ends, captured automatically."
   },
   "owner": {
     "name": "kgai maintainers",
@@ -13,7 +13,7 @@
     {
       "name": "kgai",
       "source": "./",
-      "description": "Shared memory for your dev team — your AI records the why behind the code, recalls it before changes, and syncs it without merge conflicts."
+      "description": "Shared decision memory for AI dev teams — your AI records the why behind the code, recalls it before changes, and syncs it without merge conflicts."
     }
   ]
 }

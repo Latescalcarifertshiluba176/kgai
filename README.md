@@ -1,8 +1,8 @@
-# kgai — shared memory for software teams building with AI
+# kgai — shared decision memory for AI dev teams
 
 > **Your dev team already decided this. Nobody remembers why.**
 > The *why* behind your code lives in people's heads and lost chat threads — and every AI
-> coding session starts from zero. kgai is the missing shared memory: add it to your AI
+> coding session starts from zero. kgai is the missing shared decision memory: add it to your AI
 > workflow once, and it **captures and recalls decisions by itself** while you work.
 > Team sync is opt-in (your own S3; git experimental).
 
@@ -210,7 +210,7 @@ kg sync                                      # or /kgai:kg-sync from Claude Code
 ## Roadmap
 
 - **kgai cloud** — hosted sync plane, an interactive graph you can explore in the browser,
-  and an MCP endpoint to plug the shared memory into any AI. Beta: [kgai.dev](https://kgai.dev/#cloud)
+  and an MCP endpoint to plug the shared decision memory into any AI. Beta: [kgai.dev](https://kgai.dev/#cloud)
   or team@kgai.dev.
 - Optional decision signing for zero-trust team remotes.
 - Contextual-search index for stores beyond ~100k decisions.

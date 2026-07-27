@@ -3,7 +3,7 @@
   "name": "kgai",
   "displayName": "kgai — Knowledge Graph",
   "version": "0.1.10",
-  "description": "Shared memory for software teams building with AI. Your agent records the decisions behind your code — what changed, why, even the dead ends you ruled out — recalls them before changing code, and syncs them across the team without merge conflicts. Local-first, immutable, measured to 1M decisions.",
+  "description": "Shared decision memory for AI dev teams. Your agent records the decisions behind your code — what changed, why, even the dead ends you ruled out — recalls them before changing code, and syncs them across the team without merge conflicts. Local-first, immutable, measured to 1M decisions.",
   "author": {
     "name": "kgai maintainers",
     "email": "team@kgai.dev"
