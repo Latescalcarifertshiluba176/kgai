@@ -210,7 +210,8 @@ kg sync                                      # or /kgai:kg-sync from Claude Code
 ## Roadmap
 
 - **kgai cloud** — hosted sync plane, an interactive graph you can explore in the browser,
-  and an MCP endpoint to plug the shared decision memory into any AI. Beta: [kgai.dev](https://kgai.dev/#cloud)
+  and an MCP endpoint that plugs the shared decision memory into any MCP-capable agent
+  (Cursor, Windsurf, Codex — not just Claude Code). Beta: [kgai.dev](https://kgai.dev/#cloud)
   or team@kgai.dev.
 - Optional decision signing for zero-trust team remotes.
 - Contextual-search index for stores beyond ~100k decisions.
