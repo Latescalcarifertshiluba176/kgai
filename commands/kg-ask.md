@@ -9,6 +9,9 @@ Use the `kg` CLI (JSON output) to answer:
 1. If `$ARGUMENTS` names files/paths, run `kg context --paths "<comma-separated paths>"`.
    If it's a topic, run `kg context --about "<topic>"` and `kg search "<topic>"`.
    If empty, infer the paths from the current task / recent diff and use `kg context --paths …`.
+   Matching is lexical (word overlap) — if results look thin, rephrase the topic once or
+   twice with the words the team likely recorded (domain nouns, element names: "customer
+   statements" → "invoice"), re-run, and union the results before concluding anything.
 2. For any element that looks central, run `kg history "<element kind:name>"` to show how it evolved.
 3. Run `kg conflicts --about "<topic>"` to surface unresolved branches.
 

@@ -39,6 +39,14 @@ kg conflicts --about "Invoice"        # elements with two competing head decisio
 that shaped it (newest = head, with rationale). If a decision constrains what you're
 about to do, respect it — or supersede it with a new decision (§2).
 
+**Matching is lexical (word overlap), not semantic — YOU are the semantic layer.**
+The engine matches your words against element names and decision texts
+deterministically; it cannot bridge pure synonyms. Before concluding "no record",
+rephrase once or twice with the words the team would have used when recording —
+domain nouns and decision vocabulary, not your paraphrase. "customer statements" →
+try "invoice"; "login state" → try "session", "auth". Union what the variants
+return; a hit on any phrasing counts.
+
 If `kg` prints `{"ok":false,...}`, is not installed, or returns no items, **say so
 plainly** ("the knowledge graph has no record of this yet") — never invent elements,
 links or decisions that the commands didn't return.
