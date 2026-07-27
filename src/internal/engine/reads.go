@@ -50,12 +50,19 @@ func (e *Engine) conflictsLocked() ([]ConflictGroup, error) {
 }
 
 func (e *Engine) conflictsOn(g *graph.Graph, about string) ([]ConflictGroup, error) {
+	// Ordered at every level — the competing heads within an element, and the elements
+	// themselves — so one store always describes a branch the same way, on every
+	// machine and every run. Without it collect() keeps whatever order the scan
+	// produced and two reads can list the same branch's sides the other way round.
+	// `SKIP 0` is load-bearing: Kuzu rejects ORDER BY in a WITH clause unless SKIP or
+	// LIMIT follows it, and dropping the ORDER BY is what loses the ordering.
 	rows, err := g.Raw(`MATCH (d:Decision)-[s:SHAPES]->(e:Element)
 		WHERE s.authority = true
 		  AND NOT EXISTS { MATCH (d2:Decision)-[:SUPERSEDES]->(d), (d2)-[s2:SHAPES]->(e) WHERE s2.authority = true }
+		WITH e, d ORDER BY d.lamport DESC, d.id SKIP 0
 		WITH e, collect(d.id) AS heads, collect(d.title) AS titles
 		WHERE size(heads) > 1
-		RETURN e.id AS eid, e.name AS name, e.kind AS kind, heads, titles`)
+		RETURN e.id AS eid, e.name AS name, e.kind AS kind, heads, titles ORDER BY e.id`)
 	if err != nil {
 		return nil, err
 	}
