@@ -26,8 +26,8 @@ the full story.
 - **It even remembers the dead ends.** Rejected approaches stay in the graph with the
   reason they failed — so no engineer, and no AI, re-walks a path the team already proved
   wrong.
-- **Measured, not promised.** 1,000,000 decisions across 30 writers' shards: queries
-  still answer in ~100 ms. Numbers at [kgai.dev](https://kgai.dev/#scale).
+- **Measured, not promised.** 1,000,000 decisions across 30 writers' shards: a decision
+  lookup still answers in ~100 ms. Numbers at [kgai.dev](https://kgai.dev/#scale).
 
 ## See it in action
 
