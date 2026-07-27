@@ -66,3 +66,62 @@ func TestContextReturnsOnlyHeadDecisions(t *testing.T) {
 		t.Fatalf("history must keep the superseded decision, got %d", len(hist.Decisions))
 	}
 }
+
+// The head decisions are fetched only for the elements that survive ranking and
+// truncation, so this guards the two things that decoupling can break: every item
+// must carry ITS OWN decisions (not a neighbour's), and the recency tiebreak — now
+// fed by a plain max(lamport) aggregation rather than by the head query — must still
+// order elements newest first.
+func TestContextAttachesWhyToTheRightElementsAfterTruncation(t *testing.T) {
+	s, err := store.Init(t.TempDir()+"/store", "test", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := New(s)
+
+	names := []string{"alpha", "bravo", "charlie", "delta", "echo"}
+	for _, n := range names {
+		if _, err := e.Ingest(IngestInput{Decisions: []DecisionInput{{
+			Title:     "decided " + n,
+			Rationale: "because of " + n,
+			Mutations: []MutationInput{{Op: "upsert_element", Kind: "feature", Name: n}},
+		}}}, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Supersede the oldest element so a stale decision exists to leak into context.
+	if _, err := e.Ingest(IngestInput{Decisions: []DecisionInput{{
+		Title:     "revised alpha",
+		Rationale: "alpha again",
+		Mutations: []MutationInput{{Op: "set_prop", Element: "feature:alpha", Key: "k", Value: "v"}},
+	}}}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Unfiltered: every element qualifies, so ranking is the recency tiebreak alone.
+	// "alpha" was just re-decided, so it now sorts newest, ahead of "echo".
+	res, err := e.Context(ContextQuery{Max: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Total != len(names) || res.Shown != 2 || res.Omitted != len(names)-2 {
+		t.Fatalf("truncation accounting wrong: total=%d shown=%d omitted=%d", res.Total, res.Shown, res.Omitted)
+	}
+	want := []struct{ name, why string }{
+		{"alpha", "revised alpha"},
+		{"echo", "decided echo"},
+	}
+	for i, w := range want {
+		got := res.Items[i]
+		if got.Name != w.name {
+			t.Fatalf("item %d: recency order broken, want %q got %q", i, w.name, got.Name)
+		}
+		if len(got.Why) != 1 {
+			t.Fatalf("item %d (%s): want exactly the head decision, got %d: %+v", i, got.Name, len(got.Why), got.Why)
+		}
+		if got.Why[0].Title != w.why {
+			t.Fatalf("item %d (%s): decisions attached to the wrong element, got %q want %q",
+				i, got.Name, got.Why[0].Title, w.why)
+		}
+	}
+}

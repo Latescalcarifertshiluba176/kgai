@@ -197,35 +197,23 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 		return ContextResult{}, err
 	}
 	links, _ := g.Raw(`MATCH (a:Element)-[r:LINK]->(b:Element) RETURN a.id AS f, r.kind AS k, b.id AS t, b.name AS tn, a.name AS fn`)
-	// Only current head decisions feed recall: authority SHAPES with no later
-	// authority decision superseding them (same predicate as headDecisions in
-	// engine.go). Superseded decisions stay in the log and are served by
-	// `kg history` on demand — they are not pinned into every context read.
-	shapes, _ := g.Raw(`MATCH (d:Decision)-[s:SHAPES]->(e:Element)
-		WHERE s.authority = true
-		  AND NOT EXISTS { MATCH (d2:Decision)-[:SUPERSEDES]->(d), (d2)-[s2:SHAPES]->(e) WHERE s2.authority = true }
-		RETURN e.id AS eid, d.id AS did, d.title AS title, d.rationale AS rationale,
-		  d.recorded_at AS recorded, d.lamport AS lamport ORDER BY d.lamport DESC`)
+	// Input for the recency tiebreak below. The newest authority decision on an
+	// element is necessarily one of its heads — anything superseding it on the same
+	// element would have to be newer still — so this aggregation yields exactly
+	// max(lamport) over the heads without paying the head predicate graph-wide.
+	lam, _ := g.Raw(`MATCH (d:Decision)-[s:SHAPES]->(e:Element)
+		WHERE s.authority = true RETURN e.id AS eid, max(d.lamport) AS ml`)
 
-	// index links + decisions by element
+	// index links by element
 	outL := map[string][]ContextLink{}
 	inL := map[string][]ContextLink{}
 	for _, r := range links {
 		outL[asStr(r["f"])] = append(outL[asStr(r["f"])], ContextLink{Dir: "out", Kind: asStr(r["k"]), Neighbor: asStr(r["tn"])})
 		inL[asStr(r["t"])] = append(inL[asStr(r["t"])], ContextLink{Dir: "in", Kind: asStr(r["k"]), Neighbor: asStr(r["fn"])})
 	}
-	type decRow struct {
-		title, rationale, when string
-		lamport                int64
-	}
-	byEl := map[string][]decRow{}
 	maxLam := map[string]int64{}
-	for _, r := range shapes {
-		eid := asStr(r["eid"])
-		byEl[eid] = append(byEl[eid], decRow{asStr(r["title"]), asStr(r["rationale"]), fmtTime(r["recorded"]), asInt(r["lamport"])})
-		if asInt(r["lamport"]) > maxLam[eid] {
-			maxLam[eid] = asInt(r["lamport"])
-		}
+	for _, r := range lam {
+		maxLam[asStr(r["eid"])] = asInt(r["ml"])
 	}
 
 	filtered := len(q.Paths) > 0 || q.About != ""
@@ -254,15 +242,6 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 		if filtered && score < 1 {
 			continue
 		}
-		// attach head decisions (newest first). More than one entry means the
-		// element is genuinely decided two ways (a conflict) — cap defends
-		// against pathological chains, `kg conflicts` is the full view.
-		for i, d := range byEl[eid] {
-			if i >= 4 {
-				break
-			}
-			it.Why = append(it.Why, ContextWhy{Title: d.title, Rationale: oneLine(d.rationale), When: d.when, IsHead: true})
-		}
 		it.Score = score
 		items = append(items, it)
 	}
@@ -276,6 +255,13 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 		res.Items = items
 	}
 	res.Shown = len(res.Items)
+	// The head predicate is an anti-join over the whole decision plane, so evaluating
+	// it graph-wide only to show at most q.Max elements is the bulk of a context read
+	// at scale (measured 633ms vs 43ms at 1,000,000 decisions). Ask for it once the
+	// result set is known instead.
+	if err := e.attachWhy(g, res.Items); err != nil {
+		return res, err
+	}
 	if res.Omitted > 0 {
 		res.Note = fmt.Sprintf("%d more element(s) omitted — narrow with --paths/--about or raise --max", res.Omitted)
 	}
@@ -283,6 +269,49 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 		res.Note = strings.TrimSpace("no filters — showing whole element graph. " + res.Note)
 	}
 	return res, nil
+}
+
+// attachWhy fills in the decisions behind the given elements. Only current head
+// decisions feed recall: authority SHAPES with no later authority decision
+// superseding them (same predicate as headDecisions in engine.go). Superseded
+// decisions stay in the log and are served by `kg history` on demand — they are not
+// pinned into every context read.
+func (e *Engine) attachWhy(g *graph.Graph, items []ContextItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = `'` + esc(it.ElementID) + `'`
+	}
+	rows, err := g.Raw(`MATCH (d:Decision)-[s:SHAPES]->(e:Element)
+		WHERE s.authority = true AND e.id IN [` + strings.Join(ids, ",") + `]
+		  AND NOT EXISTS { MATCH (d2:Decision)-[:SUPERSEDES]->(d), (d2)-[s2:SHAPES]->(e) WHERE s2.authority = true }
+		RETURN e.id AS eid, d.title AS title, d.rationale AS rationale,
+		  d.recorded_at AS recorded, d.lamport AS lamport ORDER BY d.lamport DESC`)
+	if err != nil {
+		return err
+	}
+	// Newest first. More than one entry means the element is genuinely decided two
+	// ways (a conflict) — the cap defends against pathological chains, `kg conflicts`
+	// is the full view.
+	byEl := map[string][]ContextWhy{}
+	for _, r := range rows {
+		eid := asStr(r["eid"])
+		if len(byEl[eid]) >= 4 {
+			continue
+		}
+		byEl[eid] = append(byEl[eid], ContextWhy{
+			Title:     asStr(r["title"]),
+			Rationale: oneLine(asStr(r["rationale"])),
+			When:      fmtTime(r["recorded"]),
+			IsHead:    true,
+		})
+	}
+	for i := range items {
+		items[i].Why = byEl[items[i].ElementID]
+	}
+	return nil
 }
 
 // ---- as-of (time travel) ---------------------------------------------------
