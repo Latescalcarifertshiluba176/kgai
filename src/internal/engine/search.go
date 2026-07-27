@@ -208,14 +208,9 @@ func elementDoc(id, kind, name, props string, extra string) searchDoc {
 	}
 }
 
-// aboutScore ranks a single element against free text (used by `kg context --about`).
-// Returns 0..1-ish (normalized by the best possible single-field weight).
-func aboutScore(query, kind, name, props string) float64 {
-	qToks := tokenize(query)
-	if len(qToks) == 0 {
-		return 0
-	}
-	fields := []searchField{{3.0, tokenize(name)}, {2.0, tokenize(kind)}, {1.0, tokenize(props)}}
+// fieldsScore sums, per query token, the best (field weight × match strength) hit
+// across the given fields — the shared core of the about-relevance scores below.
+func fieldsScore(qToks []string, fields []searchField) float64 {
 	total := 0.0
 	for _, q := range qToks {
 		best := 0.0
@@ -228,5 +223,30 @@ func aboutScore(query, kind, name, props string) float64 {
 		}
 		total += best
 	}
-	return total / (3.0 * float64(len(qToks)))
+	return total
+}
+
+// aboutScore ranks a single element against free text (used by `kg context --about`).
+// Returns 0..1-ish (normalized by the best possible single-field weight).
+func aboutScore(query, kind, name, props string) float64 {
+	qToks := tokenize(query)
+	if len(qToks) == 0 {
+		return 0
+	}
+	fields := []searchField{{3.0, tokenize(name)}, {2.0, tokenize(kind)}, {1.0, tokenize(props)}}
+	return fieldsScore(qToks, fields) / (3.0 * float64(len(qToks)))
+}
+
+// decisionAboutScore ranks one decision's text against free text, so a question
+// phrased in the words of what was DECIDED — "should I hide drafts", not the
+// element name "Invoice" — still surfaces the element that decision shaped.
+// Same weights as the decision documents in Search (title over body), same 0..1-ish
+// normalization as aboutScore. qToks is pre-tokenized: the caller scores every
+// decision in the store against one query.
+func decisionAboutScore(qToks []string, title, body string) float64 {
+	if len(qToks) == 0 {
+		return 0
+	}
+	fields := []searchField{{3.0, tokenize(title)}, {1.0, tokenize(body)}}
+	return fieldsScore(qToks, fields) / (3.0 * float64(len(qToks)))
 }

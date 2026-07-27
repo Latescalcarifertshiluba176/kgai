@@ -67,6 +67,52 @@ func TestContextReturnsOnlyHeadDecisions(t *testing.T) {
 	}
 }
 
+// A question phrased in the words of what was DECIDED — sharing no token with the
+// element's name — must still surface that element. The decision texts carry the
+// vocabulary ("hide", "drafts"); the element is just "Invoice". Purely lexical:
+// this must work with no embeddings and no LLM in the engine.
+func TestContextAboutMatchesDecisionText(t *testing.T) {
+	s, err := store.Init(t.TempDir()+"/store", "test", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := New(s)
+
+	if _, err := e.Ingest(IngestInput{Decisions: []DecisionInput{{
+		Title:     "Draft invoices stay visible",
+		Rationale: "Hiding drafts lost users.",
+		Mutations: []MutationInput{{Op: "upsert_element", Kind: "feature", Name: "Invoice"}},
+	}, {
+		Title:     "Sessions owned by the auth service",
+		Rationale: "The user service should not own login state.",
+		Mutations: []MutationInput{{Op: "upsert_element", Kind: "feature", Name: "Session"}},
+	}}}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := e.Context(ContextQuery{About: "should I hide drafts from the list", Max: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Items) != 1 || res.Items[0].Name != "Invoice" {
+		t.Fatalf("decision-text vocabulary must surface the shaped element, got %+v", res.Items)
+	}
+
+	// Naming the element directly must stay the stronger signal than matching its
+	// decisions' words — an exact name hit may not rank below a phrasing hit.
+	direct, err := e.Context(ContextQuery{About: "Invoice", Max: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(direct.Items) == 0 || direct.Items[0].Name != "Invoice" {
+		t.Fatalf("direct name query regressed: %+v", direct.Items)
+	}
+	if direct.Items[0].Score <= res.Items[0].Score {
+		t.Fatalf("direct-name score (%v) must beat decision-text score (%v)",
+			direct.Items[0].Score, res.Items[0].Score)
+	}
+}
+
 // The head decisions are fetched only for the elements that survive ranking and
 // truncation, so this guards the two things that decoupling can break: every item
 // must carry ITS OWN decisions (not a neighbour's), and the recency tiebreak — now

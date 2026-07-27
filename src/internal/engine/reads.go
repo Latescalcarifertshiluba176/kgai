@@ -223,6 +223,31 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 		maxLam[asStr(r["eid"])] = asInt(r["ml"])
 	}
 
+	// Free-text relevance must also read the DECISION texts, not just element names:
+	// people ask in the words of what was decided ("should I hide drafts?"), which
+	// often share no token with the element that decision shaped ("Invoice"). Score
+	// every authority decision — superseded ones included, a dead end is exactly what
+	// such a question is about — and give each element its best decision's score.
+	// Costs one scan of the decision texts, so it runs only for --about queries.
+	decBoost := map[string]float64{}
+	if q.About != "" {
+		qToks := tokenize(q.About)
+		dr, _ := g.Raw(`MATCH (d:Decision)-[s:SHAPES]->(el:Element) WHERE s.authority = true
+			WITH d, collect(el.id) AS eids
+			RETURN d.title AS title, d.rationale AS rationale, d.summary AS summary, eids`)
+		for _, r := range dr {
+			sc := decisionAboutScore(qToks, asStr(r["title"]), asStr(r["rationale"])+" "+asStr(r["summary"]))
+			if sc <= 0 {
+				continue
+			}
+			for _, eid := range asStrSlice(r["eids"]) {
+				if sc > decBoost[eid] {
+					decBoost[eid] = sc
+				}
+			}
+		}
+	}
+
 	filtered := len(q.Paths) > 0 || q.About != ""
 	var items []ContextItem
 	for _, r := range elems {
@@ -244,6 +269,9 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 			// Free-text relevance (see search.go) — "billing invoices" matches the
 			// Invoice element without containing the literal word.
 			score += 6 * aboutScore(q.About, it.Kind, it.Name, asStr(r["props"]))
+			// Slightly below the direct-name weight: naming the element stays the
+			// strongest signal, matching the words of its decisions comes second.
+			score += 5 * decBoost[eid]
 		}
 		score += 0.001 * float64(maxLam[eid]) // recency tiebreak
 		if filtered && score < 1 {
