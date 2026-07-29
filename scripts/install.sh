@@ -31,10 +31,27 @@ srcver() {
     echo "$KUZU_VERSION"; } | sha256sum | cut -d' ' -f1
 }
 
+project_root() {
+  # Must agree with ProjectRoot() in src/internal/store/store.go, or this script looks
+  # for the store somewhere the engine never puts it. A LINKED worktree resolves to the
+  # main worktree (its common dir is <main>/.git), so all worktrees share one store.
+  # A submodule keeps its own root: its common dir is <super>/.git/modules/... and does
+  # not end in /.git. --path-format needs git 2.31+; older git just keeps the top level.
+  local start top common
+  start="${CLAUDE_PROJECT_DIR:-$PWD}"
+  top="$(git -C "$start" rev-parse --show-toplevel 2>/dev/null)"
+  [ -n "$top" ] || { printf '%s\n' "$start"; return; }
+  common="$(git -C "$start" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+  case "$common" in
+    */.git) printf '%s\n' "${common%/.git}" ;;
+    *)      printf '%s\n' "$top" ;;
+  esac
+}
+
 ensure_store() {
   # The store is per-project (<project>/.kgai/store). Create it once per project.
   local proj cfg
-  proj="$(git -C "${CLAUDE_PROJECT_DIR:-$PWD}" rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-$PWD}")"
+  proj="$(project_root)"
   cfg="$proj/.kgai/store/kg.config.json"
   [ -f "$cfg" ] && return 0
   ( cd "$proj" && KGAI_HOME="$KGAI_HOME" LD_LIBRARY_PATH="$LIBDIR:${LD_LIBRARY_PATH:-}" "$BIN" init ) >/dev/null 2>&1 || true

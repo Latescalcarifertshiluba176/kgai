@@ -163,7 +163,7 @@ Full design: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 | Env | Meaning | Default |
 |---|---|---|
 | `KGAI_STORE` | knowledge-graph store location | `<project>/.kgai/store` (per-project) |
-| `KGAI_PROJECT` | project root used to locate the store | git top-level of the working dir |
+| `KGAI_PROJECT` | project root used to locate the store | git top-level (worktrees → main worktree) |
 | `KGAI_HOME` | engine binary + native lib home | `~/.kgai` |
 | `KGAI_ACTOR` | your name on recorded decisions | git user / `$USER` |
 | `KG_RELEASE_BASE` | prebuilt download base | this repo's latest release |
@@ -172,6 +172,15 @@ By default the KG is **per-project**: each project gets its own graph in
 `<project>/.kgai/store` (auto-created on first use and added to the project's
 `.gitignore`). The engine binary itself is shared in `~/.kgai`. Point `KGAI_STORE` at a
 shared path if you want several projects to write into one graph.
+
+**Branches and worktrees.** The graph is per *project*, not per branch. The store lives
+outside your project's git (it has its own repo and sync cycle), so `git checkout` never
+changes it: a decision recorded on a feature branch is visible from `main` immediately,
+and decisions never cause merge conflicts in your code. `git worktree` follows the same
+rule — every worktree of a project resolves to the main worktree's store, so switching to
+a worktree does not hand you an empty graph. The flip side is that a decision recorded on
+a branch you later abandon stays in the graph; record a superseding decision to retract
+it.
 
 ## Team sync
 

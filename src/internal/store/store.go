@@ -65,19 +65,71 @@ const SchemaVersion = 1
 
 // ProjectRoot resolves the current project: the git top-level of the working directory,
 // or the working directory itself when it isn't a git repo. KGAI_PROJECT overrides.
+//
+// A linked worktree (git worktree add) resolves to the MAIN worktree, so every worktree
+// of a project shares one graph. A worktree is a branch with a directory, and the KG is
+// deliberately branch-agnostic: a decision recorded while working in a worktree describes
+// the same project, and must not be stranded in a separate empty store.
 func ProjectRoot() string {
 	if v := os.Getenv("KGAI_PROJECT"); v != "" {
 		return v
 	}
-	if out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output(); err == nil {
-		if p := strings.TrimSpace(string(out)); p != "" {
-			return p
+	// One rev-parse, three answers (git prints them in argument order).
+	top, gitDir, commonDir := revParse3("--show-toplevel", "--absolute-git-dir", "--git-common-dir")
+	if top == "" {
+		if wd, err := os.Getwd(); err == nil {
+			return wd
 		}
+		return "."
 	}
-	if wd, err := os.Getwd(); err == nil {
-		return wd
+	if main := mainWorktreeRoot(gitDir, commonDir); main != "" {
+		return main
 	}
-	return "."
+	return top
+}
+
+// mainWorktreeRoot returns the main worktree's root when gitDir/commonDir describe a
+// LINKED worktree, else "". A linked worktree has a private git dir (<main>/.git/
+// worktrees/<name>) while the common dir still points at the main repo's .git.
+func mainWorktreeRoot(gitDir, commonDir string) string {
+	if gitDir == "" || commonDir == "" {
+		return ""
+	}
+	// --git-common-dir is relative to the working directory; --absolute-git-dir is not.
+	if abs, err := filepath.Abs(commonDir); err == nil {
+		commonDir = abs
+	}
+	if gitDir == commonDir {
+		return "" // ordinary checkout (a submodule lands here too — both point at its own git dir)
+	}
+	// Only trust the derivation for a conventional <root>/.git. Submodule and
+	// --separate-git-dir layouts keep the git dir somewhere unrelated to the work tree,
+	// where the parent directory would not be a project root at all.
+	if filepath.Base(commonDir) != ".git" {
+		return ""
+	}
+	root := filepath.Dir(commonDir)
+	if fi, err := os.Stat(root); err != nil || !fi.IsDir() {
+		return ""
+	}
+	return root
+}
+
+// revParse3 runs one `git rev-parse` with three flags and returns the three output lines.
+// Any line git does not produce (not a repo, old git) comes back as "".
+func revParse3(a, b, c string) (string, string, string) {
+	out, err := exec.Command("git", "rev-parse", a, b, c).Output()
+	if err != nil {
+		return "", "", ""
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	at := func(i int) string {
+		if i < len(lines) {
+			return strings.TrimSpace(lines[i])
+		}
+		return ""
+	}
+	return at(0), at(1), at(2)
 }
 
 // DefaultRoot resolves the store root. By default the KG is PER-PROJECT: it lives in

@@ -4,6 +4,23 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
+## [0.1.12] - 2026-07-29
+
+### Fixed
+- **`git worktree` no longer starts an empty graph** (#4). A linked worktree resolved to
+  itself as the project, so `git worktree add ../feature-x` produced a second, empty
+  store in that directory: `/kgai:kg-ask` returned nothing and decisions recorded there
+  were stranded, reachable only through `kg sync`. Worktrees now resolve to the main
+  worktree, so every worktree of a project reads and writes one graph — matching the
+  design, where the KG is per project and deliberately branch-agnostic. Submodules are
+  unaffected: they remain their own project. `scripts/install.sh` resolves the root the
+  same way, so it no longer re-initializes the store on every run inside a worktree.
+
+  *Upgrading:* if you already recorded decisions while working inside a worktree, they
+  are in `<worktree>/.kgai/store` and the plugin will now look in the main worktree
+  instead. Point `KGAI_STORE` at the old path to read it, or `kg sync` both stores
+  against one remote to merge them.
+
 ## [0.1.11] - 2026-07-28
 
 ### Added
