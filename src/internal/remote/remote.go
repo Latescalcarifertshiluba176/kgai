@@ -47,6 +47,6 @@ func For(url string) (Remote, error) {
 	case strings.HasPrefix(url, "kgai://"):
 		return newCloudRemote(url)
 	default:
-		return &gitRemote{}, nil
+		return &gitRemote{url: url}, nil
 	}
 }

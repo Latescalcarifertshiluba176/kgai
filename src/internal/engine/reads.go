@@ -592,8 +592,10 @@ type StatusReport struct {
 	Machine       string `json:"machine,omitempty"`
 	SchemaVersion int    `json:"schema_version"`
 
-	// Sync / remote configuration.
+	// Sync / remote configuration. Remote is the EFFECTIVE remote (the store's own,
+	// or the global default from <KGAI_HOME>/config.json); RemoteSource says which.
 	Remote           string `json:"remote,omitempty"` // redacted (credentials stripped)
+	RemoteSource     string `json:"remote_source,omitempty"` // local | global | disabled
 	RemoteConfigured bool   `json:"remote_configured"`
 	SyncTransport    string `json:"sync_transport"` // none | s3 | kgai-cloud | git
 	CloudConfigured  bool   `json:"cloud_configured"`
@@ -610,13 +612,15 @@ type StatusReport struct {
 
 func (e *Engine) Status() (StatusReport, error) {
 	c := e.S.Config
+	remoteURL, remoteSource := e.S.EffectiveRemote()
 	rep := StatusReport{
 		Root: e.S.Root, Project: store.ProjectRoot(),
 		InstallID: c.InstallID, Actor: c.Actor, Machine: c.Machine,
 		SchemaVersion:    c.SchemaVer,
-		Remote:           redactURL(c.Remote),
-		RemoteConfigured: c.Remote != "",
-		SyncTransport:    syncTransport(c.Remote),
+		Remote:           redactURL(remoteURL),
+		RemoteSource:     remoteSource,
+		RemoteConfigured: remoteURL != "",
+		SyncTransport:    syncTransport(remoteURL),
 		CloudConfigured:  c.CloudToken != "",
 		RetiredInstalls:  len(c.RetiredInstalls),
 		OK:               true,
@@ -654,9 +658,10 @@ func syncTransport(remote string) string {
 }
 
 func (e *Engine) Doctor() (DoctorReport, error) {
+	remoteURL, _ := e.S.EffectiveRemote()
 	rep := DoctorReport{
 		Root: e.S.Root, InstallID: e.S.Config.InstallID, Actor: e.S.Config.Actor,
-		Remote: redactURL(e.S.Config.Remote), SchemaVersion: e.S.Config.SchemaVer,
+		Remote: redactURL(remoteURL), SchemaVersion: e.S.Config.SchemaVer,
 	}
 	all, err := e.S.ReadAll()
 	if err != nil {

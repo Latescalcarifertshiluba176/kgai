@@ -4,6 +4,17 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
+## [Unreleased]
+
+### Added
+- **Global default sync remote** — `kg remote --global "s3://bucket/kg/{project}"` sets a
+  machine-wide default in `~/.kgai/config.json`, used by every project that has no remote
+  of its own; `{project}` expands to the project directory's name so each project keeps
+  its own prefix (omit it deliberately to share one graph). A project's local remote
+  always wins, and the local sentinel `kg remote none` opts a project out entirely. New
+  `kg remote` command shows/sets/unsets both levels; `kg status` reports the effective
+  remote and its source (`remote_source: local | global | disabled`).
+
 ## [0.1.12] - 2026-07-29
 
 ### Fixed

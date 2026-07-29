@@ -187,9 +187,24 @@ it.
 Share one memory across the whole team — humans and AIs alike:
 
 ```bash
-kg init --remote s3://your-bucket/team-kg
+kg init --remote s3://your-bucket/team-kg    # or later: kg remote s3://your-bucket/team-kg
 kg sync                                      # or /kgai:kg-sync from Claude Code
 ```
+
+Instead of configuring every project, you can set one **global default** — used by any
+project that has no remote of its own:
+
+```bash
+kg remote --global "s3://your-bucket/kg/{project}"   # {project} → the project dir's name
+kg remote                                            # show local, global and effective
+kg remote none                                       # opt THIS project out of the global
+kg remote --unset                                    # back to the global default
+```
+
+A project's own remote always wins over the global one. Without the `{project}`
+placeholder the global value is used verbatim, meaning every project syncs into one
+shared graph — do that only on purpose. `kg status` shows which remote is in effect and
+where it came from (`remote_source: local | global | disabled`).
 
 - The **S3 transport is the supported path** — any S3-compatible bucket you own. No
   server, no lock-in. It is exercised by the test suite (write-once races, copied-store

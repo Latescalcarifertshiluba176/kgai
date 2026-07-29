@@ -64,6 +64,8 @@ func dispatch(cmd string, args []string) error {
 		return cmdConflicts(args)
 	case "sync":
 		return cmdSync(args)
+	case "remote":
+		return cmdRemote(args)
 	case "rotate":
 		return cmdRotate(args)
 	case "rebuild":
@@ -338,6 +340,84 @@ func cmdSync(args []string) error {
 	return nil
 }
 
+// cmdRemote shows or sets the sync remote. With no arguments it reports the local and
+// global values plus the effective one; a URL argument sets the LOCAL remote (this
+// project), --global sets the machine-wide default in <KGAI_HOME>/config.json, --unset
+// clears. The local sentinel "none" opts this project out of a global remote.
+func cmdRemote(args []string) error {
+	fs := flag.NewFlagSet("remote", flag.ContinueOnError)
+	global := fs.Bool("global", false, "operate on the global default (<KGAI_HOME>/config.json) instead of this project")
+	unset := fs.Bool("unset", false, "clear the remote instead of setting it")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	url := fs.Arg(0)
+	if *unset && url != "" {
+		return fmt.Errorf("--unset takes no URL argument")
+	}
+
+	switch {
+	case *unset && *global:
+		gc, err := store.LoadGlobalConfig()
+		if err != nil {
+			return err
+		}
+		gc.Remote = ""
+		if err := store.SaveGlobalConfig(gc); err != nil {
+			return err
+		}
+	case *unset:
+		return setLocalRemote("")
+	case url != "" && *global:
+		if url == store.RemoteNone {
+			return fmt.Errorf("%q is a per-project opt-out; use `kg remote --global --unset` to clear the global default", store.RemoteNone)
+		}
+		gc, err := store.LoadGlobalConfig()
+		if err != nil {
+			return err
+		}
+		gc.Remote = url
+		if err := store.SaveGlobalConfig(gc); err != nil {
+			return err
+		}
+	case url != "":
+		return setLocalRemote(url)
+	}
+
+	// Always end by reporting the resulting state.
+	e, err := open()
+	if err != nil {
+		return err
+	}
+	gc, err := store.LoadGlobalConfig()
+	if err != nil {
+		return err
+	}
+	effective, source := e.S.EffectiveRemote()
+	emit(map[string]any{
+		"ok":        true,
+		"local":     e.S.Config.Remote,
+		"global":    gc.Remote,
+		"effective": effective,
+		"source":    source,
+	})
+	return nil
+}
+
+func setLocalRemote(url string) error {
+	e, err := open()
+	if err != nil {
+		return err
+	}
+	e.S.Config.Remote = url
+	if err := e.S.SaveConfig(); err != nil {
+		return err
+	}
+	effective, source := e.S.EffectiveRemote()
+	emit(map[string]any{"ok": true, "local": url, "effective": effective, "source": source})
+	return nil
+}
+
 func cmdRotate(args []string) error {
 	e, err := open()
 	if err != nil {
@@ -473,6 +553,11 @@ ADMIN
   sync         exchange the log with the configured remote, then rebuild the
                projection. s3://bucket/prefix is supported; git URLs are
                experimental (untested)
+  remote [URL] [--global] [--unset]
+               show or set the sync remote. No args: local, global and effective
+               values. URL sets this project's remote; --global sets the
+               machine-wide default ({project} expands to the project dir name);
+               local value "none" opts this project out of the global default
   rotate       give this store a fresh install identity (fix for a copied store
                after sync reports a shard fork)
   rebuild      discard graph cache and replay the whole log

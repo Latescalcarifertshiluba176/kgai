@@ -424,9 +424,10 @@ func (e *Engine) Sync() (remote.SyncResult, int, []ConflictGroup, error) {
 		return remote.SyncResult{}, 0, nil, err
 	}
 	defer e.S.Unlock()
-	r, err := remote.For(e.S.Config.Remote)
+	url, _ := e.S.EffectiveRemote()
+	r, err := remote.For(url)
 	if err != nil {
-		return remote.SyncResult{Remote: e.S.Config.Remote}, 0, nil, err
+		return remote.SyncResult{Remote: url}, 0, nil, err
 	}
 	before, err := e.S.ShardCounts()
 	if err != nil {

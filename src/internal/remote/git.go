@@ -11,25 +11,26 @@ import (
 // gitRemote syncs the store directory as a git repo: commit → fetch → union merge →
 // push. Per-install shards are distinct files, so merges are conflict-free unions;
 // never a rebase, never a force-push. With no remote configured it just commits
-// locally (free local history).
-type gitRemote struct{}
+// locally (free local history). The url is the RESOLVED remote (local config or the
+// global default) — never read from s.Config here.
+type gitRemote struct{ url string }
 
 func (g *gitRemote) Sync(s *store.Store) (SyncResult, error) {
-	res := SyncResult{Remote: s.Config.Remote}
+	res := SyncResult{Remote: g.url}
 	if err := g.commit(s, "kg sync"); err != nil {
 		return res, err
 	}
-	if s.Config.Remote == "" {
+	if g.url == "" {
 		res.Detail = "no remote configured; committed locally only"
 		return res, nil
 	}
 	// Make sure 'origin' points at the configured remote.
 	if _, err := git(s.Root, "remote", "get-url", "origin"); err != nil {
-		if _, err := git(s.Root, "remote", "add", "origin", s.Config.Remote); err != nil {
+		if _, err := git(s.Root, "remote", "add", "origin", g.url); err != nil {
 			return res, err
 		}
 	} else {
-		_, _ = git(s.Root, "remote", "set-url", "origin", s.Config.Remote)
+		_, _ = git(s.Root, "remote", "set-url", "origin", g.url)
 	}
 	branch := "main"
 	if _, err := git(s.Root, "fetch", "-q", "origin"); err != nil {
