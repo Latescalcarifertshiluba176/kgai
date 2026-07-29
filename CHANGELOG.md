@@ -4,7 +4,20 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
-## [Unreleased]
+## [1.0.0] - 2026-07-29
+
+kgai is **stable**. The jump from 0.1.x is deliberate: the plugin has been running in
+real daily use — recording and recalling decisions on active projects, including this
+repository itself, whose own knowledge graph is maintained with kgai — and the core has
+held up in practice: the event model, the deterministic projection, S3 team sync
+(exercised up to 1,000,000-decision stores), conflict detection and the Claude Code
+integration all work as designed. A 0.x version signals "expect breakage"; that no
+longer describes this software, so the version now says what the usage already shows.
+
+Stability promise from here on: the on-disk log format, the `kg` CLI surface and the
+JSON output shapes follow semver — breaking changes to any of them mean a major
+version bump. (Schema/log compatibility was already guaranteed before; now the version
+number carries that promise too.)
 
 ### Added
 - **Global default sync remote** — `kg remote --global "s3://bucket/kg/{project}"` sets a
