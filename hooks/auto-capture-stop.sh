@@ -79,13 +79,14 @@ if not edited or recorded:
 dbg("BLOCK issued")
 reason = (
     "Before you stop: this turn edited code. If it involved a STRUCTURAL/architectural "
-    "decision about the codebase — splitting/merging/moving/renaming a module or feature, "
-    "changing a dependency or ownership boundary, changing how something is exposed or "
-    "rendered, or deprecating/replacing a prior decision — you MUST record it NOW via a "
-    "single `kg ingest` (do NOT ask permission; use the knowledge-graph skill's DO/DON'T "
-    "rules to decide what counts). If the turn made no such structural decision (a pure "
-    "rename, formatting, a bug fix) or you already recorded it, record nothing and just "
-    "stop. Either record and note in one line what you captured, or stop."
+    "decision about the codebase — splitting/merging/moving a module or feature, renaming "
+    "a domain element (its canonical name — code-level renames of files/functions don't "
+    "count), changing a dependency or ownership boundary, changing how something is "
+    "exposed or rendered, or deprecating/replacing a prior decision — you MUST record it "
+    "NOW via a single `kg ingest` (do NOT ask permission; use the knowledge-graph skill's "
+    "DO/DON'T rules to decide what counts). If the turn made no such structural decision "
+    "(a code-level rename, formatting, a bug fix) or you already recorded it, record "
+    "nothing and just stop. Either record and note in one line what you captured, or stop."
 )
 print(json.dumps({"decision": "block", "reason": reason}))
 PY

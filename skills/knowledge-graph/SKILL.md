@@ -5,8 +5,10 @@ description: >-
   stable graph of domain ELEMENTS — Invoice, Pricing, Checkout… — shaped by an immutable
   log of DECISIONS). INVOKE THIS SKILL AUTOMATICALLY, WITHOUT WAITING TO BE ASKED,
   WHENEVER you make or implement a structural/architectural choice: splitting, merging,
-  moving, or renaming a module/feature; changing a dependency, ownership boundary, or how
-  something is exposed/rendered; deprecating or replacing a prior decision; or finishing
+  or moving a module/feature; renaming a domain element (its canonical name changes —
+  code-level renames of files/functions don't count); changing a dependency, ownership
+  boundary, or how something is exposed/rendered; deprecating or replacing a prior
+  decision; or finishing
   ANY task in which such a choice was made. The skill then records it for you (no
   confirmation needed) — capturing the decision is part of completing the task, not
   optional bookkeeping, so do not end your turn with an uncaptured structural decision.
@@ -103,8 +105,10 @@ How it behaves:
 
 ### When to record (keep it structural, not noise)
 - **DO:** split/merge/move a feature or component; change a dependency or ownership;
-  decide how something is rendered/exposed; deprecate/replace a prior structural choice.
-- **DON'T:** behavior-preserving refactors, renames, formatting, pure implementation
+  decide how something is rendered/exposed; deprecate/replace a prior structural choice;
+  rename a **domain element** (its canonical name in the graph changes).
+- **DON'T:** behavior-preserving refactors; code-level renames (files, functions,
+  variables) that change no element's name or boundary; formatting; pure implementation
   details with no effect on how elements relate. When in doubt, don't.
 
 ## 3. Conflicts = two head decisions on one element

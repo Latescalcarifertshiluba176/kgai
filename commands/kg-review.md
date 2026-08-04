@@ -18,7 +18,7 @@ Run a knowledge-graph-aware review/preparation of: **$ARGUMENTS** (or the curren
 - Identify **structural** choices made during the review: split/merge/move a feature,
   change a dependency or ownership, change how something is rendered/exposed,
   deprecate a prior structural choice.
-- Skip noise (refactors, renames, formatting, anything derivable from code).
+- Skip noise (refactors, code-level renames, formatting, anything derivable from code).
 - Record ONE `kg ingest` decision whose `mutations` reshape the graph
   (`upsert_element` with a `paths` prop, `add_link`/`retire_link`, `set_prop`) —
   **automatically, without asking permission**. The decision auto-supersedes the prior
