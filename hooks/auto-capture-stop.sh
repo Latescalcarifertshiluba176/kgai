@@ -8,6 +8,12 @@
 #
 # Loop-safe: it never blocks twice in a row (honors stop_hook_active). It adds no LLM
 # cost of its own — it just injects one focused instruction at exactly the right moment.
+#
+# Best-effort layer: without python3 (fresh macOS before the CLT are installed) the
+# transcript can't be parsed, and without an installed engine the `kg ingest` this hook
+# demands could never run — in both cases skip silently instead of blocking the turn.
+command -v python3 >/dev/null 2>&1 || exit 0
+[ -x "${KGAI_HOME:-$HOME/.kgai}/bin/kg" ] || exit 0
 input=$(cat)
 python3 - "$input" <<'PY'
 import sys, json, os, time
