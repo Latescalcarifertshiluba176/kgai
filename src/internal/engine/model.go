@@ -95,6 +95,7 @@ type RefInput struct {
 
 // IngestResult is returned (as JSON) after an ingest.
 type IngestResult struct {
+	Ok        bool              `json:"ok"`
 	DryRun    bool              `json:"dry_run"`
 	Decisions []DecisionResult  `json:"decisions"`
 	Elements  map[string]string `json:"elements"` // name → element id (resolution audit)

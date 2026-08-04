@@ -156,6 +156,7 @@ func (e *Engine) Ingest(in IngestInput, dryRun bool) (IngestResult, error) {
 			return res, err
 		}
 	}
+	res.Ok = true
 	return res, nil
 }
 
@@ -174,7 +175,7 @@ func (e *Engine) buildDecisionEvent(g *graph.Graph, di DecisionInput, res *Inges
 	shapes := map[string]bool{}  // every element touched (provenance)
 	targets := map[string]bool{} // elements this decision becomes the authority on
 	upserted := map[string]bool{}
-	touch := func(id string)  { shapes[id] = true }
+	touch := func(id string) { shapes[id] = true }
 	target := func(id string) { targets[id] = true; shapes[id] = true }
 	// ensureUpsert guarantees an element referenced only by a link/set_prop is created
 	// WITH its kind+name (otherwise it would be an unreadable nameless ghost node).

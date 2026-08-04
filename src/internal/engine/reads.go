@@ -83,17 +83,18 @@ func (e *Engine) conflictsOn(g *graph.Graph, about string) ([]ConflictGroup, err
 // ---- history ---------------------------------------------------------------
 
 type HistoryDecision struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	Rationale  string `json:"rationale,omitempty"`
-	Author     string `json:"author"`
-	When       string `json:"when"`
-	Lamport    int64  `json:"lamport"`
-	Mutation   string `json:"mutation,omitempty"`
-	IsHead     bool   `json:"is_head"`
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Rationale string `json:"rationale,omitempty"`
+	Author    string `json:"author"`
+	When      string `json:"when"`
+	Lamport   int64  `json:"lamport"`
+	Mutation  string `json:"mutation,omitempty"`
+	IsHead    bool   `json:"is_head"`
 }
 
 type HistoryResult struct {
+	Ok        bool              `json:"ok"`
 	ElementID string            `json:"element_id"`
 	Name      string            `json:"name"`
 	Kind      string            `json:"kind"`
@@ -138,6 +139,7 @@ func (e *Engine) History(token string) (HistoryResult, error) {
 	if len(res.Decisions) == 0 {
 		return res, fmt.Errorf("no decisions touch %q (element %s)", token, eid)
 	}
+	res.Ok = true
 	return res, nil
 }
 
@@ -153,7 +155,7 @@ func (e *Engine) resolveElementID(g *graph.Graph, token string) string {
 // ---- context ---------------------------------------------------------------
 
 type ContextLink struct {
-	Dir      string `json:"dir"`  // "out" | "in"
+	Dir      string `json:"dir"` // "out" | "in"
 	Kind     string `json:"kind"`
 	Neighbor string `json:"neighbor"`
 }
@@ -176,6 +178,7 @@ type ContextWhy struct {
 }
 
 type ContextResult struct {
+	Ok      bool          `json:"ok"`
 	Items   []ContextItem `json:"items"`
 	Shown   int           `json:"shown"`
 	Omitted int           `json:"omitted"`
@@ -306,6 +309,7 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 	if !filtered {
 		res.Note = strings.TrimSpace("no filters — showing whole element graph. " + res.Note)
 	}
+	res.Ok = true
 	return res, nil
 }
 
@@ -361,6 +365,7 @@ type AsOfLink struct {
 }
 
 type AsOfResult struct {
+	Ok       bool       `json:"ok"`
 	At       string     `json:"at"`
 	Elements []string   `json:"elements"`
 	Links    []AsOfLink `json:"links"`
@@ -439,6 +444,7 @@ func (e *Engine) AsOf(ts string) (AsOfResult, error) {
 	for _, r := range lr {
 		out.Links = append(out.Links, AsOfLink{From: asStr(r["f"]), Kind: asStr(r["k"]), To: asStr(r["t"])})
 	}
+	out.Ok = true
 	return out, nil
 }
 
@@ -518,6 +524,7 @@ func (e *Engine) Query(cypher string) ([]map[string]any, error) {
 }
 
 type ResolveResult struct {
+	Ok        bool     `json:"ok"`
 	Name      string   `json:"name"`
 	Kind      string   `json:"kind"`
 	ElementID string   `json:"element_id"`
@@ -538,12 +545,13 @@ func (e *Engine) ResolveName(token string) (ResolveResult, error) {
 	if rows, _ := g.Raw(`MATCH (n:Element {id:'` + esc(id) + `'}) RETURN n.id`); len(rows) > 0 {
 		existed = true
 	}
-	return ResolveResult{Name: name, Kind: kind, ElementID: id, Existed: existed, Heads: e.headDecisions(g, id)}, nil
+	return ResolveResult{Ok: true, Name: name, Kind: kind, ElementID: id, Existed: existed, Heads: e.headDecisions(g, id)}, nil
 }
 
 // ---- canonical export ------------------------------------------------------
 
 type ExportResult struct {
+	Ok        bool             `json:"ok"`
 	Elements  []map[string]any `json:"elements"`
 	Links     []map[string]any `json:"links"`
 	Decisions []map[string]any `json:"decisions"`
@@ -569,6 +577,7 @@ func (e *Engine) Export(canonical bool) (ExportResult, error) {
 		sum := sha256.Sum256(b)
 		out.Digest = "sha256:" + hex.EncodeToString(sum[:])
 	}
+	out.Ok = true
 	return out, nil
 }
 
@@ -602,7 +611,7 @@ type StatusReport struct {
 
 	// Sync / remote configuration. Remote is the EFFECTIVE remote (the store's own,
 	// or the global default from <KGAI_HOME>/config.json); RemoteSource says which.
-	Remote           string `json:"remote,omitempty"` // redacted (credentials stripped)
+	Remote           string `json:"remote,omitempty"`        // redacted (credentials stripped)
 	RemoteSource     string `json:"remote_source,omitempty"` // local | global | disabled
 	RemoteConfigured bool   `json:"remote_configured"`
 	SyncTransport    string `json:"sync_transport"` // none | s3 | kgai-cloud | git
