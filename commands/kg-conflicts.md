@@ -11,12 +11,16 @@ Find and help resolve conflicting decisions. Optional filter: **$ARGUMENTS**
    how they diverged.
 3. Explain each branch and recommend a resolution.
 4. On the user's decision, record ONE new decision that changes that element again — it
-   automatically supersedes both heads — with a rationale for the resolution:
+   automatically supersedes both heads. Its mutations must RE-EXPRESS the intended state
+   of what the branches disagreed on (re-assert the winning link/prop, retire the losing
+   one) — do not invent a marker property just to touch the element:
 
    ```bash
    kg ingest <<'JSON'
-   { "decision": { "title": "…resolution…", "rationale": "why this wins / how they merge",
-     "mutations": [ {"op":"set_prop","element":"feature:Invoice","key":"resolved","value":"true"} ] } }
+   { "decision": { "title": "Invoice stays standalone (resolves branch)",
+     "rationale": "why this wins / how the two branches merge",
+     "mutations": [ {"op":"retire_link","from":"feature:Invoice","link":"PART_OF","to":"feature:Pricing"},
+                    {"op":"set_prop","element":"feature:Invoice","key":"display","value":"standalone"} ] } }
    JSON
    ```
 
