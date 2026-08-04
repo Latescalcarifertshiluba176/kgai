@@ -465,7 +465,9 @@ func (e *Engine) Search(text string, limit int) ([]SearchHit, error) {
 	for _, r := range er {
 		docs = append(docs, elementDoc(asStr(r["id"]), asStr(r["kind"]), asStr(r["name"]), asStr(r["props"]), asStr(r["kind"])))
 	}
-	dr, _ := g.Raw(`MATCH (d:Decision)-[s:SHAPES]->(el:Element) WHERE s.authority = true
+	// OPTIONAL MATCH so decisions that shape no element (e.g. a recorded dead end
+	// with no mutations) are still searchable — search is their only recall path.
+	dr, _ := g.Raw(`MATCH (d:Decision) OPTIONAL MATCH (d)-[:SHAPES]->(el:Element)
 		WITH d, collect(el.name) AS els
 		RETURN d.id AS id, d.title AS title, d.rationale AS rationale, d.summary AS summary, els`)
 	for _, r := range dr {

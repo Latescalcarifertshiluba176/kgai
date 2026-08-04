@@ -81,6 +81,12 @@ kg ingest <<'JSON'
 JSON
 ```
 
+**Every decision must attach to at least one element** through its mutations — element-
+centric recall (`kg context`, `kg history`) can only surface decisions via their
+elements. This holds for dead ends too: record a rejected approach as a decision ON the
+element it concerned (a single `upsert_element` is enough). Pick or create the obvious
+domain element yourself — never ask the user which element to attach.
+
 Mutation ops (required fields in **bold**):
 - `upsert_element` — ensure a node exists: **`kind`** (e.g. `feature`, `business`,
   `service`, `component`, `concept`) + **`name`**. Optional `props` (e.g. `paths` →

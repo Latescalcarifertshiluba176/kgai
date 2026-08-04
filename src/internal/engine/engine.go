@@ -242,6 +242,11 @@ func (e *Engine) buildDecisionEvent(g *graph.Graph, di DecisionInput, res *Inges
 	d.Shapes = sortedKeys(shapes)
 	d.Targets = sortedKeys(targets)
 	d.ID = event.DecisionID(d)
+	if len(d.Shapes) == 0 {
+		// Recorded and searchable, but element-centric recall (context/history) can
+		// never surface it — worth a nudge, not an error.
+		res.Warnings = append(res.Warnings, fmt.Sprintf("decision %q shapes no element — kg context/history recall works per element, so attach one (a single upsert_element mutation is enough)", d.Title))
+	}
 
 	dr := DecisionResult{ID: d.ID, Title: d.Title, Shapes: d.Shapes, Supersedes: d.Supersedes}
 	ev := event.Event{Op: event.OpAssert, Decision: &d}
