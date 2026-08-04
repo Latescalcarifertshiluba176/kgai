@@ -262,13 +262,13 @@ func (e *Engine) resolveMutation(mi MutationInput, res *IngestResult) (event.Mut
 		kind := orDefault(mi.Kind, "concept")
 		id := event.ElementID(kind, mi.Name)
 		res.Elements[mi.Name] = id
-		return event.Mutation{Op: event.MutUpsertElement, ElementID: id, Kind: kind, Name: mi.Name, Props: mi.Props}, nil
+		return event.Mutation{Op: event.MutUpsertElement, ElementID: id, Kind: kind, Name: mi.Name, Props: toStringMap(mi.Props)}, nil
 	case event.MutSetProp:
 		id, _, _ := e.resolveElementRef(mi.Element, res)
 		if id == "" {
 			return event.Mutation{}, fmt.Errorf("set_prop missing \"element\"")
 		}
-		return event.Mutation{Op: event.MutSetProp, ElementID: id, Key: mi.Key, Value: mi.Value}, nil
+		return event.Mutation{Op: event.MutSetProp, ElementID: id, Key: mi.Key, Value: string(mi.Value)}, nil
 	case event.MutAddLink, event.MutRetireLink:
 		from, _, _ := e.resolveElementRef(mi.From, res)
 		to, _, _ := e.resolveElementRef(mi.To, res)
