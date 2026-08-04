@@ -26,6 +26,18 @@ git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
   with the `*` as a literal byte in the prefix fallback, so `src/billing/invoice/*`
   missed `src/billing/invoice/sub/x.ts` and never overlapped `src/billing/*`. A
   trailing `/*` or `/**` now compares as its directory prefix.
+- **Recording a note on an existing element no longer mints a false conflict.** The
+  projection granted a targets-less decision authority over everything it shaped (a
+  legacy-compatibility rule), while ingest computed supersession only from explicit
+  targets — so a bare `upsert_element` of an existing element (the recorded-dead-end
+  pattern) created a second head and a phantom branch. Authority now follows intent:
+  an explicit upsert takes authority when it **creates** the element (its first head)
+  or carries `props`; a bare upsert of an existing element is provenance-only —
+  visible in search and history, supersedes nothing, cannot conflict. New events
+  carry `provenance_only` so replay distinguishes them from legacy events; existing
+  logs verify and replay unchanged. `kg context --about` now also matches the
+  vocabulary of provenance-only decisions (a dead end is often exactly what the
+  question is about).
 - **`kg as-of <YYYY-MM-DD>` now means the END of that day.** A bare date was parsed as
   midnight UTC, so asking about today silently dropped everything recorded today.
 - **`kg history` orders by real time.** The timeline is ordered by `recorded_at`
@@ -43,8 +55,9 @@ git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
   itself within one paragraph. Now uniformly: renaming a *domain element* (its
   canonical name changes) records; code-level renames (files, functions, variables)
   don't. The skill also states precisely which mutations take authority (and thus
-  supersede/conflict): `set_prop`, `upsert_element` with props, and the `from` side
-  of links — bare upserts and link targets are provenance only.
+  supersede/conflict): `set_prop`, an upsert that creates the element or carries
+  `props`, and the `from` side of links — bare upserts of existing elements and link
+  targets are provenance only.
 
 ### Changed
 - **Read commands no longer create a store.** Previously any `kg` command lazily

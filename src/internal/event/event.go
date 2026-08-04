@@ -54,6 +54,12 @@ type Decision struct {
 	Shapes     []string   `json:"shapes,omitempty"`     // element ids touched (provenance)
 	Targets    []string   `json:"targets,omitempty"`    // subset of Shapes this decision is the new AUTHORITY on (drives heads/conflicts)
 	Mutations  []Mutation `json:"mutations"`
+	// ProvenanceOnly marks a decision that deliberately takes authority over NOTHING
+	// (a note or recorded dead end: only bare upserts, no set_prop/props/links-from).
+	// Needed because legacy events predating Targets also have an empty Targets list
+	// but mean the opposite — authority over everything they shape. Absent (false) on
+	// those old events, so their stored hashes still verify.
+	ProvenanceOnly bool `json:"provenance_only,omitempty"`
 }
 
 // MutOp enumerates the structural operations a decision can apply.

@@ -197,7 +197,13 @@ func (e *Engine) buildDecisionEvent(g *graph.Graph, di DecisionInput, res *Inges
 			}
 			upserted[m.ElementID] = true
 			touch(m.ElementID)
-			if len(m.Props) > 0 {
+			// An explicit upsert takes authority when it sets props OR when it CREATES
+			// the element (its birth certificate — "we decided to have X" must become
+			// X's head, or a seeded domain map would answer every `why` with nothing).
+			// A bare upsert of an element that already exists is provenance only: a
+			// note or dead end attaches without unseating the standing head decision
+			// and without minting a conflict branch.
+			if len(m.Props) > 0 || !elementExists(g, m.ElementID) {
 				target(m.ElementID)
 			}
 			d.Mutations = append(d.Mutations, m)
@@ -242,6 +248,11 @@ func (e *Engine) buildDecisionEvent(g *graph.Graph, di DecisionInput, res *Inges
 	d.Supersedes = sortedKeys(supSet)
 	d.Shapes = sortedKeys(shapes)
 	d.Targets = sortedKeys(targets)
+	// Distinguish "governs nothing by design" from legacy events whose empty Targets
+	// meant authority everywhere — otherwise the projection would grant this decision
+	// authority it never claimed, minting a false conflict branch (supersedes is
+	// computed from targets, so nothing was superseded).
+	d.ProvenanceOnly = len(d.Targets) == 0
 	d.ID = event.DecisionID(d)
 	if len(d.Shapes) == 0 {
 		// Recorded and searchable, but element-centric recall (context/history) can
@@ -298,6 +309,11 @@ func (e *Engine) resolveElementRef(token string, res *IngestResult) (id, kind, n
 		res.Elements[name] = id
 	}
 	return id, kind, name
+}
+
+func elementExists(g *graph.Graph, id string) bool {
+	rows, _ := g.Raw(`MATCH (n:Element {id:'` + esc(id) + `'}) RETURN n.id LIMIT 1`)
+	return len(rows) > 0
 }
 
 // headDecisions returns the decision(s) currently authoritative over an element: those

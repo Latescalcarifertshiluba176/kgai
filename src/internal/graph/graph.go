@@ -215,7 +215,7 @@ func (g *Graph) ApplyEvent(ev event.Event) error {
 	}
 	for _, eid := range d.Shapes {
 		g.ensureElement(eid, "", "")
-		auth := targets[eid] || len(d.Targets) == 0
+		auth := targets[eid] || (len(d.Targets) == 0 && !d.ProvenanceOnly)
 		if err := g.exec(
 			`MATCH (n:Decision {id:$d}), (e:Element {id:$e}) MERGE (n)-[r:SHAPES]->(e)
 			 ON CREATE SET r.authority=$a`,

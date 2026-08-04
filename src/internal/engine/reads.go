@@ -239,7 +239,9 @@ func (e *Engine) Context(q ContextQuery) (ContextResult, error) {
 	decBoost := map[string]float64{}
 	if q.About != "" {
 		qToks := tokenize(q.About)
-		dr, _ := g.Raw(`MATCH (d:Decision)-[s:SHAPES]->(el:Element) WHERE s.authority = true
+		// ALL shaping decisions feed the boost — provenance-only ones included: a
+		// recorded dead end is exactly what such a question tends to be about.
+		dr, _ := g.Raw(`MATCH (d:Decision)-[:SHAPES]->(el:Element)
 			WITH d, collect(el.id) AS eids
 			RETURN d.title AS title, d.rationale AS rationale, d.summary AS summary, eids`)
 		for _, r := range dr {

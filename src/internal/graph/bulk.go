@@ -279,7 +279,7 @@ func (st *memState) apply(ev event.Event) {
 		st.ensureElement(eid, "", "")
 		key := d.ID + "\x00" + eid
 		if _, ok := st.shapes[key]; !ok {
-			st.shapes[key] = memShape{dec: d.ID, el: eid, authority: targets[eid] || len(d.Targets) == 0}
+			st.shapes[key] = memShape{dec: d.ID, el: eid, authority: targets[eid] || (len(d.Targets) == 0 && !d.ProvenanceOnly)}
 		}
 	}
 
