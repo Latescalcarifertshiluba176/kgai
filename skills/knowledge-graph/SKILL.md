@@ -120,10 +120,9 @@ How it behaves:
 ### When to record (keep it structural, not noise)
 - **DO:** split/merge/move a feature or component; change a dependency or ownership;
   decide how something is rendered/exposed; deprecate/replace a prior structural choice;
-  rename a **domain element** (its canonical name in the graph changes); make a real
-  **ops/infra choice** (enable/defer/replace a service, change monitoring, deployment
-  or a boundary) — express it on that service's element, e.g. `upsert_element` kind
-  `service` + `set_prop`.
+  rename a **domain element** (its canonical name in the graph changes). This applies
+  to ANY kind of element the team decides about — a feature, a service, a business
+  object — not just code.
 - **DON'T:** behavior-preserving refactors; code-level renames (files, functions,
   variables) that change no element's name or boundary; formatting; pure implementation
   details with no effect on how elements relate; **analyses, research findings, cost or
