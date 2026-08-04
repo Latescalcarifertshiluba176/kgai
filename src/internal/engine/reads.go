@@ -109,11 +109,14 @@ func (e *Engine) History(token string) (HistoryResult, error) {
 	}
 	defer g.Close()
 	eid := e.resolveElementID(g, token)
+	// Ordered by recorded_at (lamport only breaks ties): back-dated imports (an old
+	// ADR given its real `date`) must appear where they belong on the timeline, not
+	// at the moment of import. Per-element result sets are tiny, so this costs nothing.
 	rows, err := g.Raw(`MATCH (d:Decision)-[:SHAPES]->(e:Element {id:'` + esc(eid) + `'})
 		RETURN e.name AS name, e.kind AS kind, d.id AS id, d.title AS title,
 		  d.rationale AS rationale, d.author AS author, d.recorded_at AS recorded,
 		  d.lamport AS lamport, d.summary AS mutation
-		ORDER BY d.lamport`)
+		ORDER BY d.recorded_at, d.lamport`)
 	if err != nil {
 		return HistoryResult{}, err
 	}

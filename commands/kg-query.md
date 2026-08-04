@@ -16,5 +16,5 @@ Run a raw Cypher query: **$ARGUMENTS**
 
 Examples:
 - Current shape: `kg query "MATCH (a:Element)-[r:LINK]->(b:Element) RETURN a.name, r.kind, b.name"`
-- Why an element is the way it is: `kg query "MATCH (d:Decision)-[:SHAPES]->(e:Element {name:'Invoice'}) RETURN d.title, d.rationale ORDER BY d.lamport"`
+- Why an element is the way it is: `kg query "MATCH (d:Decision)-[:SHAPES]->(e:Element {name:'Invoice'}) RETURN d.title, d.rationale ORDER BY d.recorded_at"`
 - Elements with no decisions yet: `kg query "MATCH (e:Element) WHERE NOT EXISTS { MATCH (:Decision)-[:SHAPES]->(e) } RETURN e.name"`
