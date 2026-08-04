@@ -68,10 +68,10 @@ func (s *Store) EffectiveRemote() (url, source string) {
 	if err != nil || gc.Remote == "" {
 		return "", ""
 	}
-	return expandRemote(gc.Remote), "global"
+	return ExpandRemote(gc.Remote), "global"
 }
 
-// expandRemote fills the {project} placeholder with the project directory's name.
-func expandRemote(remote string) string {
+// ExpandRemote fills the {project} placeholder with the project directory's name.
+func ExpandRemote(remote string) string {
 	return strings.ReplaceAll(remote, "{project}", filepath.Base(ProjectRoot()))
 }

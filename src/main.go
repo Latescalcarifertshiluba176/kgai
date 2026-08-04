@@ -8,9 +8,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -88,18 +90,54 @@ func dispatch(cmd string, args []string) error {
 	}
 }
 
+// open opens the store for a WRITE-intent command (ingest, sync, setting a remote),
+// lazily creating the per-project store on first use so recording a decision always
+// works in a fresh project — no `kg init` required.
 func open() (*engine.Engine, error) {
 	root := os.Getenv("KGAI_STORE")
 	s, err := store.Open(root)
 	if err != nil {
-		// Not initialized yet → lazily create the per-project store on first use, so
-		// any command (read or write) just works in a fresh project.
 		s, err = store.Init(root, "", "")
 		if err != nil {
 			return nil, err
 		}
 	}
 	return engine.New(s), nil
+}
+
+// openRead opens the store for a READ command WITHOUT creating it. Running a read in
+// a directory with no store (e.g. outside any project) must not silently mint a new
+// empty graph there — that forks the project's memory. A missing store returns
+// (nil, nil); callers emit their empty result shape plus noStoreNote() so an agent
+// reads a clean "nothing recorded here yet" instead of an error.
+func openRead() (*engine.Engine, error) {
+	s, err := store.Open(os.Getenv("KGAI_STORE"))
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil // no store yet — NOT an error, and nothing is created
+		}
+		return nil, err // real problem (e.g. corrupt config) must stay loud
+	}
+	return engine.New(s), nil
+}
+
+func noStoreNote() string {
+	return fmt.Sprintf("no knowledge graph store at %s — nothing recorded for this project yet. The store is created automatically by the first recorded decision (kg ingest) or by kg init.", store.DefaultRoot())
+}
+
+// noStore emits the empty result for a read command against a missing store: the
+// command's natural empty shape merged with an explanatory note.
+func noStore(extra map[string]any) error {
+	if pretty() {
+		fmt.Println(cDim + noStoreNote() + cReset)
+		return nil
+	}
+	m := map[string]any{"ok": true, "note": noStoreNote()}
+	for k, v := range extra {
+		m[k] = v
+	}
+	emit(m)
+	return nil
 }
 
 func cmdInit(args []string) error {
@@ -179,9 +217,12 @@ func cmdResolve(args []string) error {
 	if fs.NArg() < 1 {
 		return fmt.Errorf("usage: kg resolve \"<kind:name>\"")
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"existed": false})
 	}
 	out, err := e.ResolveName(strings.Join(fs.Args(), " "))
 	if err != nil {
@@ -199,9 +240,12 @@ func cmdQuery(args []string) error {
 	if fs.NArg() < 1 {
 		return fmt.Errorf("usage: kg query \"<cypher>\"")
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"rows": []any{}})
 	}
 	rows, err := e.Query(strings.Join(fs.Args(), " "))
 	if err != nil {
@@ -217,9 +261,12 @@ func cmdSearch(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"hits": []any{}})
 	}
 	hits, err := e.Search(strings.Join(fs.Args(), " "), *limit)
 	if err != nil {
@@ -241,9 +288,12 @@ func cmdContext(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"items": []any{}, "shown": 0, "omitted": 0, "total": 0})
 	}
 	res, err := e.Context(engine.ContextQuery{Paths: splitCSV(*paths), About: *about, Max: *max})
 	if err != nil {
@@ -265,9 +315,12 @@ func cmdHistory(args []string) error {
 	if fs.NArg() < 1 {
 		return fmt.Errorf("usage: kg history \"<element kind:name or id>\"")
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"decisions": []any{}})
 	}
 	res, err := e.History(strings.Join(fs.Args(), " "))
 	if err != nil {
@@ -289,9 +342,12 @@ func cmdAsOf(args []string) error {
 	if fs.NArg() < 1 {
 		return fmt.Errorf("usage: kg as-of <timestamp>")
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"elements": []any{}, "links": []any{}})
 	}
 	res, err := e.AsOf(fs.Arg(0))
 	if err != nil {
@@ -307,9 +363,12 @@ func cmdConflicts(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"conflicts": []any{}, "count": 0})
 	}
 	conf, err := e.Conflicts(*about)
 	if err != nil {
@@ -384,14 +443,27 @@ func cmdRemote(args []string) error {
 		return setLocalRemote(url)
 	}
 
-	// Always end by reporting the resulting state.
-	e, err := open()
+	// Always end by reporting the resulting state. Showing state is a read — it must
+	// not create a store, so a missing one reports the global default alone.
+	e, err := openRead()
 	if err != nil {
 		return err
 	}
 	gc, err := store.LoadGlobalConfig()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		effective, source := "", ""
+		if gc.Remote != "" {
+			effective, source = store.ExpandRemote(gc.Remote), "global"
+		}
+		return noStore(map[string]any{
+			"local":     "",
+			"global":    gc.Remote,
+			"effective": effective,
+			"source":    source,
+		})
 	}
 	effective, source := e.S.EffectiveRemote()
 	emit(map[string]any{
@@ -405,8 +477,18 @@ func cmdRemote(args []string) error {
 }
 
 func setLocalRemote(url string) error {
-	e, err := open()
-	if err != nil {
+	var e *engine.Engine
+	var err error
+	if url == "" {
+		// Unsetting: nothing to clear if no store exists — don't create one for it.
+		if e, err = openRead(); err != nil {
+			return err
+		}
+		if e == nil {
+			return noStore(nil)
+		}
+	} else if e, err = open(); err != nil {
+		// Setting a remote is deliberate configuration — creating the store is intended.
 		return err
 	}
 	e.S.Config.Remote = url
@@ -419,9 +501,12 @@ func setLocalRemote(url string) error {
 }
 
 func cmdRotate(args []string) error {
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"rotated": false})
 	}
 	if err := e.S.Lock(); err != nil {
 		return err
@@ -437,9 +522,12 @@ func cmdRotate(args []string) error {
 }
 
 func cmdRebuild(args []string) error {
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"applied": 0})
 	}
 	n, err := e.Rebuild()
 	if err != nil {
@@ -455,9 +543,12 @@ func cmdExport(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(nil)
 	}
 	out, err := e.Export(*canonical)
 	if err != nil {
@@ -468,9 +559,12 @@ func cmdExport(args []string) error {
 }
 
 func cmdDoctor(args []string) error {
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"initialized": false})
 	}
 	rep, err := e.Doctor()
 	if err != nil {
@@ -485,9 +579,12 @@ func cmdStatus(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	e, err := open()
+	e, err := openRead()
 	if err != nil {
 		return err
+	}
+	if e == nil {
+		return noStore(map[string]any{"initialized": false, "version": version})
 	}
 	rep, err := e.Status()
 	if err != nil {

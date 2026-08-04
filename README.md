@@ -86,9 +86,11 @@ reads and records decisions on its own. To record or query by hand:
 ## Initialize the graph for a project
 
 The store is **per-project** and everything is picked up automatically — it is created in
-`<project>/.kgai/store` on first use (and added to the project's `.gitignore`), and your
-name on recorded decisions comes from `git config user.name`. To set it up explicitly up
-front:
+`<project>/.kgai/store` at session start (and by the first recorded decision, and added
+to the project's `.gitignore`); your name on recorded decisions comes from
+`git config user.name`. Read commands never create a store: where nothing has been
+recorded they answer with an empty result and a note instead of minting a stray empty
+graph. To set it up explicitly up front:
 
 ```bash
 cd your-project
