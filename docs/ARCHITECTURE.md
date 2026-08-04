@@ -142,4 +142,5 @@ store-wide `flock` so concurrent sessions never corrupt the single-writer cache.
 | `src/internal/engine` | resolution, ingest, rebuild, context scoring, history/as-of/conflicts/search/doctor/export |
 | `src/main.go` | `kg` CLI (JSON I/O) |
 | `scripts/` | `fetch-libs.sh` (native lib), `install.sh` (idempotent engine install) |
-| `bin/kg` | PATH shim → stable `~/.kgai` engine |
+| `bin/kg` | PATH shim for Claude Code's Bash tool → stable `~/.kgai` engine |
+| `~/.local/bin/kg` | launcher written by `install.sh` → same engine, for the user's own terminal |

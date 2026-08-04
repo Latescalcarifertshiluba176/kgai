@@ -83,6 +83,23 @@ reads and records decisions on its own. To record or query by hand:
 /kgai:kg-history              # how something evolved
 ```
 
+The same setup also puts `kg` in `~/.local/bin`, so the CLI works in your own terminal and
+not only inside Claude Code. If that directory isn't on your `PATH`, the installer appends
+one marked line to your shell profile — open a new terminal and `kg version` answers.
+
+### Install the CLI by hand
+
+To get `kg` on a machine where the plugin never ran, or to repair an installation:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kgaidev/kgai/main/scripts/install.sh | bash
+```
+
+That is the plugin's own installer: the engine lands in `~/.kgai`, the `kg` launcher in
+`~/.local/bin`, and both are re-checked at every session start. `KGAI_HOME` and
+`KGAI_USER_BIN` override the two locations. To remove it all: `rm -rf ~/.kgai
+~/.local/bin/kg` and delete the `# added by kgai` line from your shell profile.
+
 ## Initialize the graph for a project
 
 The store is **per-project** and everything is picked up automatically — it is created in

@@ -14,5 +14,12 @@ BIN="$KGAI_HOME/bin/kg"
 [ -x "$BIN" ] || exit 0
 export LD_LIBRARY_PATH="$KGAI_HOME/lib:${LD_LIBRARY_PATH:-}"
 export DYLD_LIBRARY_PATH="$KGAI_HOME/lib:${DYLD_LIBRARY_PATH:-}"
-setsid "$BIN" sync --auto </dev/null >/dev/null 2>&1 &
+# setsid is util-linux and does not exist on macOS — without the fallback the spawn failed
+# silently there and automatic sync never ran on a Mac. nohup + background in a subshell
+# detaches well enough: the child survives this hook exiting and ignores the hangup.
+if command -v setsid >/dev/null 2>&1; then
+  setsid "$BIN" sync --auto </dev/null >/dev/null 2>&1 &
+else
+  ( nohup "$BIN" sync --auto </dev/null >/dev/null 2>&1 & )
+fi
 exit 0

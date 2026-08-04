@@ -4,6 +4,37 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
+## [1.4.0] - 2026-08-04
+
+### Fixed
+- **`kg` now works in your own terminal, not only inside Claude Code.** The plugin's
+  `bin/kg` shim is only on the PATH Claude Code hands its Bash tool, so every `kg init` /
+  `kg sync` / `kg context` the README asks you to run was `command not found` outside a
+  session — on every platform. The installer now writes a launcher to `~/.local/bin/kg`
+  (a script, not a symlink: the macOS rpath is `@loader_path/../lib` and resolves against
+  the running binary's own directory) and, only when that directory is missing from
+  `PATH`, appends one marked line to the shell profile the login shell actually reads.
+  An unrelated `kg` already there is left alone. `KGAI_USER_BIN` overrides the location.
+- **The engine updates again on macOS.** The install fingerprint was hashed with
+  `sha256sum`, which does not exist on macOS — it came out empty, matched the empty file
+  the previous run had written, and the "already current" fast path then skipped every
+  reinstall forever. Macs kept running whatever engine they first downloaded, so plugin
+  updates never reached them. Hashing now falls back to `shasum`/`openssl`, and the
+  fingerprint always carries the plugin version, so it can never be empty again. Stuck
+  installations repair themselves on the next session start.
+- **Source builds on macOS produce a loadable engine.** The build passed
+  `-rpath,$ORIGIN/../lib` on every platform; dyld has no `$ORIGIN`, so a Mac that fell
+  back to building from source (prebuilt download blocked or unavailable) got a binary
+  that could not load `libkuzu.dylib` at all. macOS now builds with `@loader_path`.
+- **Automatic team sync runs on macOS.** The Stop/SessionStart hook spawned the sync via
+  `setsid`, which is util-linux only; on a Mac the spawn failed silently and background
+  sync never happened. Falls back to `nohup` where `setsid` is absent.
+
+### Added
+- **By-hand install for the CLI**, documented in the README and on kgai.dev:
+  `curl -fsSL https://raw.githubusercontent.com/kgaidev/kgai/main/scripts/install.sh | bash`
+  installs the same engine and launcher without Claude Code.
+
 ## [1.3.0] - 2026-08-03
 
 ### Changed
