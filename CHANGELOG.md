@@ -4,6 +4,56 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
+## [Unreleased]
+
+### Added
+- **`ok` in every successful JSON output.** `ingest`, `context`, `history`, `as-of`,
+  `resolve` and `export` now carry `"ok": true` like the other commands, so an agent
+  can uniformly check one field (the skill teaches exactly that).
+- **Release checksums.** The build workflow publishes a `<asset>.sha256` next to every
+  release asset, and `install.sh` verifies downloads against it — a mismatch discards
+  the download and falls back to the source build. Releases without checksums (and
+  machines without a sha256 tool) skip verification with a note.
+- **Ingest warning for element-less decisions.** A decision whose mutations attach no
+  element is recorded and searchable, but invisible to `kg context`/`kg history`
+  (element-centric recall); ingest now says so. `kg search` additionally indexes ALL
+  decisions — previously a decision with no shaped element was unfindable by every
+  read command.
+
+### Fixed
+- **`kg as-of <YYYY-MM-DD>` now means the END of that day.** A bare date was parsed as
+  midnight UTC, so asking about today silently dropped everything recorded today.
+- **`kg history` orders by real time.** The timeline is ordered by `recorded_at`
+  (lamport breaks ties), so decisions imported with a back-dated `date` appear where
+  they belong instead of at their import position.
+- **`set_prop` values and `props` accept any JSON scalar.** `"value": 3` or
+  `"visible": true` no longer fail with a Go unmarshal error; numbers, booleans and
+  null are stored in canonical string form.
+- **`kg query` refuses file/database I/O.** The projection was already opened
+  read-only (graph writes fail), but Kuzu's `COPY … TO` could still write arbitrary
+  files. COPY/LOAD/EXPORT/IMPORT/ATTACH/DETACH/INSTALL statements are now rejected;
+  string literals are ignored by the check, so querying *about* those words works.
+- **One rename rule everywhere.** The skill's description said "renaming" records a
+  decision while its DON'T list said renames don't — and the Stop hook contradicted
+  itself within one paragraph. Now uniformly: renaming a *domain element* (its
+  canonical name changes) records; code-level renames (files, functions, variables)
+  don't. The skill also states precisely which mutations take authority (and thus
+  supersede/conflict): `set_prop`, `upsert_element` with props, and the `from` side
+  of links — bare upserts and link targets are provenance only.
+
+### Changed
+- **Read commands no longer create a store.** Previously any `kg` command lazily
+  initialized `<cwd>/.kgai/store` when none existed — so a read run in the wrong
+  directory (outside any git project) silently minted a new empty graph there and
+  answered "no record", forking the project's memory. Reads (`search`, `context`,
+  `history`, `as-of`, `conflicts`, `resolve`, `query`, `export`, `status`, `doctor`,
+  `rebuild`, `rotate`, and `kg remote` without a URL) now return their empty result
+  shape with `"ok": true` and a `note` explaining that nothing is recorded there yet.
+  Nothing changes for plugin users: the store is still created automatically — at
+  session start, by the first recorded decision (`kg ingest`), by `kg sync`, by
+  setting a remote, or by an explicit `kg init`. A corrupt store still fails loudly
+  rather than reading as empty.
+
 ## [1.0.0] - 2026-07-29
 
 kgai is **stable**. The jump from 0.1.x is deliberate: the plugin has been running in

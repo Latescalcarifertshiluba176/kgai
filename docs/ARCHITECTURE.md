@@ -5,7 +5,7 @@
 Capture engineering **decisions and knowledge** that otherwise live only in developers'
 heads, **immutably and historically** (the evolution of each decision is preserved),
 **local-first**, and primarily **for an AI** to read from and write to. (Team sync to a
-shared remote is designed in — see below — but not yet exposed as a supported feature.)
+shared remote: the S3 transport is supported; see [Sync and conflicts](#sync-and-conflicts).)
 
 ## Two planes, one log
 
