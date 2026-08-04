@@ -9,9 +9,10 @@ Run a raw Cypher query: **$ARGUMENTS**
    - Nodes: `Element(id, kind, name, props)`, `Decision(id, title, rationale, author,
      recorded_at, lamport)`.
    - Rels: `LINK(kind, created_by)` Element→Element (current links),
-     `SHAPES` Decision→Element (provenance), `SUPERSEDES` Decision→Decision (history).
-   - A decision is a **head** for an element when no other decision that also
-     `SHAPES` it supersedes it.
+     `SHAPES(authority)` Decision→Element (provenance; `authority = true` when the
+     decision governs that element), `SUPERSEDES` Decision→Decision (history).
+   - A decision is a **head** for an element when it SHAPES it with authority and no
+     later authority decision on that element supersedes it.
    The query runs read-only; graph writes and file/database I/O statements
    (COPY/LOAD/EXPORT/IMPORT/ATTACH/INSTALL) are rejected.
 2. Present the rows readably.

@@ -8,8 +8,8 @@ description: >-
   or moving a module/feature; renaming a domain element (its canonical name changes —
   code-level renames of files/functions don't count); changing a dependency, ownership
   boundary, or how something is exposed/rendered; deprecating or replacing a prior
-  decision; or finishing
-  ANY task in which such a choice was made. The skill then records it for you (no
+  decision; or finishing ANY task in which such a choice was made. The skill then
+  records it for you (no
   confirmation needed) — capturing the decision is part of completing the task, not
   optional bookkeeping, so do not end your turn with an uncaptured structural decision.
   ALSO invoke it BEFORE a non-trivial change to read prior decisions you must respect,
@@ -33,13 +33,14 @@ kg search "how is invoice rendering structured"   # free-text, relevance-ranked 
 kg context --about "Invoice"          # the element + its current links + decisions that shaped it
 kg context --paths "src/billing/*"    # elements whose `paths` property matches what you're editing
 kg history "feature:Invoice"          # full decision chain that shaped one element (the why, over time)
-kg as-of 2026-01-01                   # what the graph looked like at a past date (exact, via replay)
+kg as-of 2026-01-01                   # the whole graph at a past date (end of that day; exact, via replay)
 kg conflicts --about "Invoice"        # elements with two competing head decisions (unresolved)
 ```
 
-`kg context` returns, per matched element: its current **links** and the **decisions**
-that shaped it (newest = head, with rationale). If a decision constrains what you're
-about to do, respect it — or supersede it with a new decision (§2).
+`kg context` returns, per matched element: its current **links** and its **head
+decision(s)** — the ones currently governing it, with rationale (superseded ones live
+in `kg history`). If a decision constrains what you're about to do, respect it — or
+supersede it with a new decision (§2).
 
 **Matching is lexical (word overlap), not semantic — YOU are the semantic layer.**
 The engine matches your words against element names and decision texts
@@ -103,12 +104,14 @@ How it behaves:
   element and reuse it. Unsure if it exists? `kg resolve "feature:Invoice"` first.
 - The decision **automatically supersedes** the previous head decision(s) of every
   element it takes **authority** over → the element's history chains, and concurrent
-  edits surface as a conflict (§3). Authority comes from `set_prop`, `upsert_element`
-  **with `props`**, and the **`from`** side of `add_link`/`retire_link`; a bare
-  `upsert_element` and a link's `to` side are provenance only (they show in history but
-  supersede nothing and can't conflict). To take authority over an extra element
-  explicitly, list it in the decision's `"supersedes_on": ["kind:name", …]`. You
-  usually don't set supersession by hand.
+  edits surface as a conflict (§3). Authority comes from `set_prop`, from
+  `upsert_element` that **creates** the element or carries `props`, and from the
+  **`from`** side of `add_link`/`retire_link`. A bare `upsert_element` of an element
+  that already exists — the dead-end pattern above — and a link's `to` side are
+  provenance only: they show in search and history but supersede nothing and can't
+  conflict. To take authority over an extra element explicitly, list it in the
+  decision's `"supersedes_on": ["kind:name", …]`. You usually don't set supersession
+  by hand.
 - **Retiring a link removes it from the live graph but never from history** — the
   decision that retired it is permanent, and `kg as-of <date>` reconstructs the old
   shape.
@@ -126,11 +129,14 @@ How it behaves:
 
 If the same element was changed concurrently (e.g. from two sessions), it has two head
 decisions — a branch. `kg conflicts` lists them. Resolve by recording one decision that
-changes that element again (it supersedes both heads), with a rationale for the resolution.
+**takes authority over that element again** (a `set_prop`, an `upsert_element` with
+`props`, or a link from it — a bare upsert resolves nothing): it supersedes both heads.
+Its mutations should re-express the intended state, with a rationale for the resolution.
 
 ## Schema (for `kg query`)
 Nodes: `Element(id, kind, name, props)`, `Decision(id, title, rationale, author,
 recorded_at, lamport)`. Rels: `LINK(kind, created_by)` Element→Element (current state),
-`SHAPES` Decision→Element (provenance), `SUPERSEDES` Decision→Decision (evolution).
-A decision is a **head** for an element if no other decision that also `SHAPES` it
-supersedes it.
+`SHAPES(authority)` Decision→Element (provenance; `authority = true` when the decision
+governs that element), `SUPERSEDES` Decision→Decision (evolution). A decision is a
+**head** for an element if it SHAPES it with authority and no later authority decision
+on that element supersedes it.
