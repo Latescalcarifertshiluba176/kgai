@@ -4,7 +4,7 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
-## [Unreleased]
+## [1.2.0] - 2026-08-03
 
 ### Added
 - **Automatic background team sync.** With a remote configured, a plugin hook now
