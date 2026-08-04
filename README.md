@@ -71,11 +71,12 @@ claude plugin marketplace add kgaidev/kgai
 claude plugin install kgai@kgai-marketplace
 ```
 
-On first run the plugin sets itself up automatically — prebuilt engine binaries ship for
-**Linux** (x86_64, aarch64) and **macOS** (Apple Silicon + Intel), so you need neither Go
-nor a C compiler (it downloads the engine to
-`~/.kgai`; falls back to building from source if needed). Then just work normally — Claude
-reads and records decisions on its own. To record or query by hand:
+The plugin sets itself up the first time you start a Claude Code session with it enabled —
+installing a plugin only downloads files, so nothing runs until then. Prebuilt engine
+binaries ship for **Linux** (x86_64, aarch64) and **macOS** (Apple Silicon + Intel), so you
+need neither Go nor a C compiler (the engine goes to `~/.kgai`; falls back to building from
+source if needed). Then just work normally — Claude reads and records decisions on its own.
+To record or query by hand:
 
 ```bash
 /kgai:kg-ask "Invoice"        # what's decided about this area, and why
@@ -95,10 +96,9 @@ To get `kg` on a machine where the plugin never ran, or to repair an installatio
 curl -fsSL https://raw.githubusercontent.com/kgaidev/kgai/main/scripts/install.sh | bash
 ```
 
-That is the plugin's own installer: the engine lands in `~/.kgai`, the `kg` launcher in
-`~/.local/bin`, and both are re-checked at every session start. `KGAI_HOME` and
-`KGAI_USER_BIN` override the two locations. To remove it all: `rm -rf ~/.kgai
-~/.local/bin/kg` and delete the `# added by kgai` line from your shell profile.
+That is the plugin's own installer, run standalone: same engine, same launcher, same
+locations — see the [FAQ](#faq) for what it puts where and how to remove it. Once the
+plugin runs too, both keep themselves current at every session start.
 
 ## Initialize the graph for a project
 
@@ -258,6 +258,30 @@ Claude once, at the next session start; `kg sync` shows the reason.
   both — and the branch *and* its resolution stay in history.
 - Copied stores are detected (identity is machine-bound) and fail loudly instead of
   silently forking history; `kg rotate` gives a copied store a fresh identity.
+
+## FAQ
+
+**I installed the plugin, but `kg` isn't in my terminal.**
+Installing a plugin only downloads its files — Claude Code runs no code at that moment,
+and a plugin has no post-install hook. The engine and the `kg` launcher are set up by the
+plugin's `SessionStart` hook, so they appear the first time you actually start a Claude
+Code session with the plugin enabled. Start one session and `kg` works from then on. To
+skip the wait — or to get the CLI on a machine that won't run Claude Code at all — use the
+[by-hand install](#install-the-cli-by-hand).
+
+**The plugin updated, but my engine didn't.**
+It does now: the installer compares a fingerprint that includes the plugin version, so a
+plugin update reinstalls the engine at the next session start. Before v1.4.0 that
+fingerprint was computed with a tool macOS doesn't ship, came out empty, and every Mac
+kept whatever engine it first downloaded. Such an installation repairs itself once v1.4.0
+runs; nothing to do by hand.
+
+**Where does it all live, and how do I remove it?**
+The engine and native lib in `~/.kgai` (override with `KGAI_HOME`), the `kg` launcher in
+`~/.local/bin` (`KGAI_USER_BIN`), and each project's decision log in
+`<project>/.kgai/store`. Removing it is `rm -rf ~/.kgai ~/.local/bin/kg` plus the one
+`# added by kgai` line the installer adds to your shell profile when `~/.local/bin` isn't
+already on `PATH`. Your projects' logs are separate — delete those per project.
 
 ## Roadmap
 
