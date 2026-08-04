@@ -24,6 +24,34 @@ mkdir -p "$KGAI_HOME/bin" "$LIBDIR"
 
 status() { echo "kgai: $*"; }
 
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1
+  elif command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | cut -d' ' -f1
+  fi
+}
+
+# verify_asset <file> <asset-name> — checks a downloaded file against the release's
+# published <asset-name>.sha256. A missing checksum asset (releases before checksums
+# shipped) or a machine without a sha256 tool skips verification with a note; a
+# MISMATCH fails hard (corrupted or tampered download).
+verify_asset() {
+  local file="$1" asset="$2" want have
+  want="$(curl -fsSL "$KG_RELEASE_BASE/$asset.sha256" 2>/dev/null | awk '{print $1}')"
+  if [ -z "$want" ]; then
+    status "no checksum published for $asset — skipping verification"
+    return 0
+  fi
+  have="$(sha256_of "$file")"
+  if [ -z "$have" ]; then
+    status "no sha256 tool on this machine — skipping verification"
+    return 0
+  fi
+  if [ "$want" != "$have" ]; then
+    status "⚠️ checksum MISMATCH for $asset — discarding download"
+    return 1
+  fi
+}
+
 # srcver fingerprints the engine source so a plugin update triggers a rebuild.
 srcver() {
   { cat "$ROOT/src/go.mod" 2>/dev/null
@@ -91,11 +119,15 @@ if [ -n "${KG_RELEASE_BASE:-}" ]; then
     lib_asset="libkuzu-$os-$arch.so"; lib_file="libkuzu.so"
   fi
   if curl -fsSL -o "$KGAI_HOME/bin/kg.new" "$KG_RELEASE_BASE/kg-$os-$arch" 2>/dev/null \
-     && curl -fsSL -o "$LIBDIR/$lib_file" "$KG_RELEASE_BASE/$lib_asset" 2>/dev/null; then
+     && curl -fsSL -o "$LIBDIR/$lib_file.new" "$KG_RELEASE_BASE/$lib_asset" 2>/dev/null \
+     && verify_asset "$KGAI_HOME/bin/kg.new" "kg-$os-$arch" \
+     && verify_asset "$LIBDIR/$lib_file.new" "$lib_asset"; then
     mv "$KGAI_HOME/bin/kg.new" "$BIN"; chmod +x "$BIN"
+    mv "$LIBDIR/$lib_file.new" "$LIBDIR/$lib_file"
     report_ready "prebuilt $os-$arch"
     exit 0
   fi
+  rm -f "$KGAI_HOME/bin/kg.new" "$LIBDIR/$lib_file.new"
   status "prebuilt download failed, falling back to source build…"
 fi
 
