@@ -102,8 +102,13 @@ How it behaves:
   fork the node**: `Zürich` ≠ `Zurich`, `Invoice` ≠ `Bill`. Pick one canonical name per
   element and reuse it. Unsure if it exists? `kg resolve "feature:Invoice"` first.
 - The decision **automatically supersedes** the previous head decision(s) of every
-  element it changes → the element's history chains, and concurrent edits surface as a
-  conflict (§3). You usually don't set supersession by hand.
+  element it takes **authority** over → the element's history chains, and concurrent
+  edits surface as a conflict (§3). Authority comes from `set_prop`, `upsert_element`
+  **with `props`**, and the **`from`** side of `add_link`/`retire_link`; a bare
+  `upsert_element` and a link's `to` side are provenance only (they show in history but
+  supersede nothing and can't conflict). To take authority over an extra element
+  explicitly, list it in the decision's `"supersedes_on": ["kind:name", …]`. You
+  usually don't set supersession by hand.
 - **Retiring a link removes it from the live graph but never from history** — the
   decision that retired it is permanent, and `kg as-of <date>` reconstructs the old
   shape.
