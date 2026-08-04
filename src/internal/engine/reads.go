@@ -371,6 +371,9 @@ func (e *Engine) AsOf(ts string) (AsOfResult, error) {
 		if cut, perr = time.Parse("2006-01-02", ts); perr != nil {
 			return AsOfResult{}, fmt.Errorf("invalid timestamp %q (use RFC3339 or YYYY-MM-DD)", ts)
 		}
+		// A bare date means "as of that day" — its END, else asking about today
+		// would silently drop everything recorded today.
+		cut = cut.Add(24*time.Hour - time.Second)
 	}
 	all, err := e.S.ReadAll()
 	if err != nil {
