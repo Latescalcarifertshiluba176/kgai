@@ -4,6 +4,16 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
+## [Unreleased]
+
+### Changed
+- **`kg ingest` rejects unknown fields instead of silently dropping them.** A model
+  that invents an input field — typically mirroring the ingest OUTPUT shape, e.g.
+  `"elements": [...]` — used to record a decision with no mutations and never learn
+  why it was unfindable. Unknown fields anywhere in the payload now fail with a
+  message listing the valid fields and showing how elements are attached (via
+  `mutations`), so the model corrects itself on the spot.
+
 ## [1.2.0] - 2026-08-03
 
 ### Added

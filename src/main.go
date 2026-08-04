@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -191,7 +192,15 @@ func cmdIngest(args []string) error {
 		return err
 	}
 	var in engine.IngestInput
-	if err := json.Unmarshal(raw, &in); err != nil {
+	// Unknown fields are rejected, not silently dropped: a model that invents a field
+	// (typically mirroring the OUTPUT shape, e.g. "elements") would otherwise record a
+	// decision with no mutations and never learn why it is unfindable.
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&in); err != nil {
+		if strings.Contains(err.Error(), "unknown field") {
+			return fmt.Errorf("invalid ingest JSON: %w — valid decision fields are title, rationale, author, date, refs, supersedes_on, mutations; elements are attached via mutations, e.g. {\"op\":\"upsert_element\",\"kind\":\"service\",\"name\":\"X\"}", err)
+		}
 		return fmt.Errorf("invalid ingest JSON: %w", err)
 	}
 	e, err := open()
