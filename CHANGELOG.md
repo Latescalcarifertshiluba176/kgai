@@ -4,7 +4,7 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
-## [Unreleased]
+## [1.3.0] - 2026-08-03
 
 ### Changed
 - **Analyses and reports are not decisions.** The skill's DON'T list — and the Stop
