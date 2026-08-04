@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -503,7 +504,20 @@ func (e *Engine) Search(text string, limit int) ([]SearchHit, error) {
 
 // ---- raw query / resolve ---------------------------------------------------
 
+// forbiddenCypher matches statement keywords that reach outside the graph: COPY/LOAD
+// read or write arbitrary files, EXPORT/IMPORT touch whole databases, ATTACH/DETACH
+// bind external ones, INSTALL loads extensions. The projection is opened read-only,
+// which blocks graph writes — but not these, so they are refused here. Matching runs
+// with string literals stripped, so a query ABOUT the word ("… CONTAINS 'export'")
+// still works.
+var forbiddenCypher = regexp.MustCompile(`(?i)(^|[^a-zA-Z0-9_])(copy|load|export|import|attach|detach|install)([^a-zA-Z0-9_]|$)`)
+
+var cypherStrings = regexp.MustCompile(`'[^']*'|"[^"]*"`)
+
 func (e *Engine) Query(cypher string) ([]map[string]any, error) {
+	if m := forbiddenCypher.FindStringSubmatch(cypherStrings.ReplaceAllString(cypher, "''")); m != nil {
+		return nil, fmt.Errorf("kg query is read-only: %s statements are not allowed (file/database I/O)", strings.ToUpper(m[2]))
+	}
 	g, err := e.openRead()
 	if err != nil {
 		return nil, err

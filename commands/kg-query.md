@@ -12,6 +12,8 @@ Run a raw Cypher query: **$ARGUMENTS**
      `SHAPES` Decision→Element (provenance), `SUPERSEDES` Decision→Decision (history).
    - A decision is a **head** for an element when no other decision that also
      `SHAPES` it supersedes it.
+   The query runs read-only; graph writes and file/database I/O statements
+   (COPY/LOAD/EXPORT/IMPORT/ATTACH/INSTALL) are rejected.
 2. Present the rows readably.
 
 Examples:
