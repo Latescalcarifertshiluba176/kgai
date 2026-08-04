@@ -641,7 +641,7 @@ READ
   context [--paths a,b] [--about X] [--max N]         relevant elements + the decisions that shaped them
   history "<element>"                                 full decision chain that shaped an element
   as-of <timestamp>                                   element-graph structure effective at a past time
-  search "<text>" [--limit N]                         substring search over elements & decisions
+  search "<text>" [--limit N]                         free-text search over elements & decisions (relevance-ranked, typo-tolerant)
   resolve "<kind:name>"                               resolve an element name to its deterministic id
   query "<cypher>"                                    raw Cypher (power users)
   conflicts [--about X]                               elements shaped by >1 head decision
