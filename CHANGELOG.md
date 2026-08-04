@@ -7,6 +7,14 @@ git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 ## [Unreleased]
 
 ### Changed
+- **Ops choices belong in the graph; analyses and reports do not.** The skill's
+  DO list now includes real ops/infra choices (enable/defer/replace a service,
+  change monitoring or deployment), expressed on that service's element; the DON'T
+  list — and the Stop hook — now explicitly exclude analyses, research findings,
+  cost/status reports and recommendations nobody has acted on. When an analysis
+  produces a real choice, the model records THE CHOICE with a short why, not the
+  analysis; volatile figures (prices, counts, billing) stay out of the immutable
+  log.
 - **`kg ingest` rejects unknown fields instead of silently dropping them.** A model
   that invents an input field — typically mirroring the ingest OUTPUT shape, e.g.
   `"elements": [...]` — used to record a decision with no mutations and never learn

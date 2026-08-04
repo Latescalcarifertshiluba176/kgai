@@ -120,10 +120,17 @@ How it behaves:
 ### When to record (keep it structural, not noise)
 - **DO:** split/merge/move a feature or component; change a dependency or ownership;
   decide how something is rendered/exposed; deprecate/replace a prior structural choice;
-  rename a **domain element** (its canonical name in the graph changes).
+  rename a **domain element** (its canonical name in the graph changes); make a real
+  **ops/infra choice** (enable/defer/replace a service, change monitoring, deployment
+  or a boundary) — express it on that service's element, e.g. `upsert_element` kind
+  `service` + `set_prop`.
 - **DON'T:** behavior-preserving refactors; code-level renames (files, functions,
   variables) that change no element's name or boundary; formatting; pure implementation
-  details with no effect on how elements relate. When in doubt, don't.
+  details with no effect on how elements relate; **analyses, research findings, cost or
+  status reports, and recommendations nobody has acted on** — however important. If a
+  real choice came out of the analysis, record THE CHOICE (element + mutations + a
+  2–3 sentence why), not the analysis itself; volatile figures (prices, counts,
+  billing) belong in the report, not in the immutable log. When in doubt, don't.
 
 ## 3. Conflicts = two head decisions on one element
 
