@@ -6,8 +6,10 @@
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -446,6 +448,51 @@ func (e *Engine) Sync() (remote.SyncResult, int, []ConflictGroup, error) {
 		return remote.SyncResult{}, 0, nil, err
 	}
 	defer e.S.Unlock()
+	return e.syncLocked()
+}
+
+// SyncAuto is the background variant of Sync, safe to fire on every turn end. It
+// skips silently (ran=false) when the cooldown stamp is fresh or another process
+// holds the store lock (an interactive write, or a previous auto-sync still
+// running), and records the outcome of real attempts in <store>/last-autosync.json
+// so the session-start status line can surface a persistently failing sync without
+// ever interrupting anyone.
+func (e *Engine) SyncAuto(cooldown time.Duration) (ran bool, sr remote.SyncResult, applied int, conf []ConflictGroup, err error) {
+	stamp := filepath.Join(e.S.Root, ".autosync-stamp")
+	if fi, serr := os.Stat(stamp); serr == nil && time.Since(fi.ModTime()) < cooldown {
+		return false, sr, 0, nil, nil
+	}
+	ok, lerr := e.S.TryLock()
+	if lerr != nil || !ok {
+		return false, sr, 0, nil, lerr
+	}
+	defer e.S.Unlock()
+	// Stamp the ATTEMPT, success or failure — a broken remote (expired SSO,
+	// offline) must retry at the cooldown rate, not on every single turn.
+	_ = os.WriteFile(stamp, nil, 0o644)
+	sr, applied, conf, err = e.syncLocked()
+	res := map[string]any{
+		"ok": err == nil, "when": time.Now().UTC().Format(time.RFC3339),
+		"remote": sr.Remote, "pushed": sr.Pushed, "pulled": sr.Pulled,
+		"applied": applied, "conflict_count": len(conf),
+	}
+	if err != nil {
+		res["error"] = err.Error()
+	}
+	if sr.Detail != "" {
+		// Soft failures (bad credentials, offline) come back as ok:true with a
+		// detail, by transport design — record it so the session-start status line
+		// can still surface a sync that never actually syncs.
+		res["detail"] = sr.Detail
+	}
+	if b, jerr := json.Marshal(res); jerr == nil {
+		_ = os.WriteFile(filepath.Join(e.S.Root, "last-autosync.json"), append(b, '\n'), 0o644)
+	}
+	return true, sr, applied, conf, err
+}
+
+func (e *Engine) syncLocked() (remote.SyncResult, int, []ConflictGroup, error) {
+	_ = e.S.EnsureScaffold() // older stores must learn the current ignore list before git's add -A
 	url, _ := e.S.EffectiveRemote()
 	r, err := remote.For(url)
 	if err != nil {

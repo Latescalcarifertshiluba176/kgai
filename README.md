@@ -208,6 +208,15 @@ placeholder the global value is used verbatim, meaning every project syncs into 
 shared graph — do that only on purpose. `kg status` shows which remote is in effect and
 where it came from (`remote_source: local | global | disabled`).
 
+**Once a remote is configured, syncing is automatic.** A plugin hook fires `kg sync
+--auto` in the background at session start and after every turn — detached, so nobody
+ever waits on the network. It throttles itself (one attempt per minute), skips without
+blocking when another write holds the store, and with no remote configured it exits in
+a few milliseconds without doing anything. Decisions recorded during a session reach
+the team within a turn; teammates' decisions arrive as you work. If the background
+sync stops working (expired SSO, offline), it stays silent during work and tells
+Claude once, at the next session start; `kg sync` shows the reason.
+
 - The **S3 transport is the supported path** — any S3-compatible bucket you own. No
   server, no lock-in. It is exercised by the test suite (write-once races, copied-store
   fork detection) and by archived benchmark runs up to 1,000,000-decision stores.

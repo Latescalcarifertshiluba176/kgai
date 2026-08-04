@@ -4,6 +4,23 @@ All notable changes to the kgai plugin are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions match the
 git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
 
+## [Unreleased]
+
+### Added
+- **Automatic background team sync.** With a remote configured, a plugin hook now
+  fires `kg sync --auto` at session start and after every turn — detached and
+  fire-and-forget (~1 ms in the hook), so neither the user nor the model ever waits
+  on the network. The auto mode is engineered to be a safe no-op everywhere else:
+  no store or no remote → silent exit in a few milliseconds (never creates a store);
+  a sync attempted less than 60 s ago → skipped (`--cooldown` to tune); the store
+  lock held by another write → skipped via a new non-blocking `TryLock`, never
+  queued. Real attempts record their outcome in `<store>/last-autosync.json`
+  (including soft failures like expired SSO, which the S3 transport reports as
+  `ok:true` + detail); a sync that isn't actually syncing surfaces once per session
+  in the install status line — never louder. The store's `.gitignore` learns the new
+  stamp/result files, and sync re-writes the scaffold so stores created by older
+  engines pick that up before the git transport's `add -A` could commit them.
+
 ## [1.1.0] - 2026-08-03
 
 ### Added

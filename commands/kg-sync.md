@@ -13,8 +13,10 @@ Run `kg sync` for the current project and report the result to the user.
 4. If sync fails with a shard-fork error, explain that the store was likely copied from
    another machine and that `kg rotate` gives it a fresh identity, then re-run sync.
 
-Notes: S3 remotes are the supported path. Git remotes are experimental and untested —
-warn the user if the remote is a git URL. Never run `kg rotate` without the user's
+Notes: with a remote configured, sync also runs automatically in the background (at
+session start and after each turn) — this command is for syncing on demand and for
+seeing the result. S3 remotes are the supported path. Git remotes are experimental and
+untested — warn the user if the remote is a git URL. Never run `kg rotate` without the user's
 explicit confirmation. If S3 sync fails with an AWS credential/SSO error, the remote can
 pin a profile — `kg init --remote "s3://bucket/prefix?profile=NAME"` — and the user may
 need `aws sso login --profile NAME` first.

@@ -255,13 +255,18 @@ func (s *Store) saveConfig() error {
 // SaveConfig persists config changes made after Init (e.g. cloud credentials).
 func (s *Store) SaveConfig() error { return s.saveConfig() }
 
+// EnsureScaffold re-writes the store's .gitignore/.gitattributes. Sync calls it so
+// stores created by older engines pick up newly ignored files (e.g. the auto-sync
+// stamp) before the git transport's `add -A` could commit them.
+func (s *Store) EnsureScaffold() error { return s.ensureGitScaffold() }
+
 func (s *Store) ensureGitScaffold() error {
 	// .gitignore: derived graph cache, native libs, lock, and the install-local
 	// config (its installId/actor differ per install and must NOT be shared, or
 	// clones would conflict on it during merge).
 	// graph.kuzu may be a file or a directory depending on engine version; match
 	// both plus its wal/shadow files. *.so = downloaded native libs.
-	gi := "graph.kuzu*\n*.so\n.kg.lock\nkg.config.json\n"
+	gi := "graph.kuzu*\n*.so\n.kg.lock\nkg.config.json\n.autosync-stamp\nlast-autosync.json\n"
 	if err := os.WriteFile(filepath.Join(s.Root, ".gitignore"), []byte(gi), 0o644); err != nil {
 		return err
 	}
@@ -284,12 +289,29 @@ func (s *Store) ensureGitScaffold() error {
 
 // Lock acquires an exclusive advisory lock serializing all writers (record/sync/
 // rebuild) so concurrent sessions never corrupt the shard or the graph cache.
-func (s *Store) Lock() error {
+func (s *Store) Lock() error { return s.lock2(false) }
+
+// TryLock is the non-blocking Lock: it reports false, nil when another process
+// holds the store lock. For background work (auto-sync) that should skip rather
+// than queue behind an interactive write.
+func (s *Store) TryLock() (bool, error) {
+	err := s.lock2(true)
+	if err == syscall.EWOULDBLOCK {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (s *Store) lock2(try bool) error {
 	f, err := os.OpenFile(s.lockPath(), os.O_CREATE|os.O_RDWR, 0o644)
 	if err != nil {
 		return err
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	how := syscall.LOCK_EX
+	if try {
+		how |= syscall.LOCK_NB
+	}
+	if err := syscall.Flock(int(f.Fd()), how); err != nil {
 		f.Close()
 		return err
 	}

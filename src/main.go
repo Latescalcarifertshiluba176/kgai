@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"os"
 	"strings"
+	"time"
 
 	"kgai/internal/engine"
 	"kgai/internal/store"
@@ -383,6 +384,33 @@ func cmdConflicts(args []string) error {
 }
 
 func cmdSync(args []string) error {
+	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
+	auto := fs.Bool("auto", false, "background mode: exit silently when there is no store, no remote, a fresh cooldown stamp, or a held lock — never create anything, never block")
+	cooldown := fs.Int("cooldown", 60, "with --auto: skip if a sync was attempted fewer than this many seconds ago")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if *auto {
+		// Fired blindly by hooks on every session start and turn end. Everything
+		// that makes it a no-op must be silent and fast.
+		e, err := openRead()
+		if err != nil || e == nil {
+			return nil // no store here (or unreadable) — a background job stays quiet
+		}
+		if url, _ := e.S.EffectiveRemote(); url == "" {
+			return nil
+		}
+		ran, sr, applied, conf, err := e.SyncAuto(time.Duration(*cooldown) * time.Second)
+		if err != nil {
+			return err // JSON error → the hook's log redirect; last-autosync.json has it too
+		}
+		if ran {
+			emit(map[string]any{"ok": true, "sync": sr, "applied": applied, "conflict_count": len(conf)})
+		}
+		return nil
+	}
+
 	e, err := open()
 	if err != nil {
 		return err
@@ -647,9 +675,12 @@ READ
   conflicts [--about X]                               elements shaped by >1 head decision
 
 ADMIN
-  sync         exchange the log with the configured remote, then rebuild the
+  sync [--auto] [--cooldown SECS]
+               exchange the log with the configured remote, then rebuild the
                projection. s3://bucket/prefix is supported; git URLs are
-               experimental (untested)
+               experimental (untested). --auto is the background mode the
+               plugin hooks fire: silent no-op without a store/remote, honors
+               a cooldown, never blocks on the store lock
   remote [URL] [--global] [--unset]
                show or set the sync remote. No args: local, global and effective
                values. URL sets this project's remote; --global sets the

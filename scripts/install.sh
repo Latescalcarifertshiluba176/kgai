@@ -95,6 +95,14 @@ report_ready() {
   if [ -n "$conf" ] && [ "$conf" != "0" ]; then
     extra="⚠ $conf unresolved decision conflict(s) — run /kgai:kg-conflicts. "
   fi
+  # Background auto-sync runs silently; a persistent failure surfaces here, once
+  # per session, instead of nagging on every turn. Soft failures (expired SSO,
+  # offline) report ok:true with a detail, so check for either.
+  local lastsync
+  lastsync="$(project_root)/.kgai/store/last-autosync.json"
+  if [ -f "$lastsync" ] && grep -qE '"ok": *false|"detail":' "$lastsync" 2>/dev/null; then
+    extra="${extra}⚠ background team sync did not sync on its last attempt — tell the user to run \`kg sync\` to see why. "
+  fi
   status "engine ready ($1). ${extra}Use /kgai:kg-ask before non-trivial changes; /kgai:kg-decision to record decisions."
 }
 
