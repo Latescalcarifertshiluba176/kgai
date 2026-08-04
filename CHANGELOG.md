@@ -21,6 +21,11 @@ git tags (`vX.Y.Z`) and `.claude-plugin/plugin.json`.
   read command.
 
 ### Fixed
+- **`kg context --paths` matches nested files and overlapping globs.** A stored
+  `paths` prop ending in `/*` (the convention the skill itself teaches) was compared
+  with the `*` as a literal byte in the prefix fallback, so `src/billing/invoice/*`
+  missed `src/billing/invoice/sub/x.ts` and never overlapped `src/billing/*`. A
+  trailing `/*` or `/**` now compares as its directory prefix.
 - **`kg as-of <YYYY-MM-DD>` now means the END of that day.** A bare date was parsed as
   midnight UTC, so asking about today silently dropped everything recorded today.
 - **`kg history` orders by real time.** The timeline is ordered by `recorded_at`

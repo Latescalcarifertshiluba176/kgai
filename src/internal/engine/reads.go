@@ -837,7 +837,19 @@ func globMatch(stored, query string) bool {
 	if ok, _ := path.Match(query, stored); ok {
 		return true
 	}
-	return strings.HasPrefix(query, strings.TrimSuffix(stored, "/")) ||
-		strings.HasPrefix(stored, strings.TrimSuffix(query, "/")) ||
-		strings.Contains(query, stored) || strings.Contains(stored, query)
+	// A trailing "/*" or "/**" means "this directory" — compare the directory
+	// prefixes, not the literal '*' byte. Without this, the very convention the
+	// skill teaches (props: {"paths": "src/billing/invoice/*"}) fails to match a
+	// nested file (src/billing/invoice/sub/x.ts — path.Match stops at '/') and
+	// two globs at different depths (src/billing/* vs src/billing/invoice/*)
+	// never overlap.
+	sp, qp := trimGlobSuffix(stored), trimGlobSuffix(query)
+	return strings.HasPrefix(qp, sp) || strings.HasPrefix(sp, qp) ||
+		strings.Contains(qp, sp) || strings.Contains(sp, qp)
+}
+
+func trimGlobSuffix(p string) string {
+	p = strings.TrimSuffix(p, "/**")
+	p = strings.TrimSuffix(p, "/*")
+	return strings.TrimSuffix(p, "/")
 }
